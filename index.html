@@ -7,8 +7,11 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#111827">
     
+    <!-- Иконки для PWA и браузера -->
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
     <link rel="apple-touch-icon" href="icon-192.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
     <link rel="manifest" href="manifest.json">
 
     <title>DreadMetric | Professional Tool</title>
@@ -37,11 +40,11 @@
 
         .hidden { display: none !important; }
 
-        /* ВОЗВРАТ ДИЗАЙНА: Тонкие линии и белые круглые бегунки */
+        /* Дизайн ползунков из оригинала */
         input[type="range"] {
             -webkit-appearance: none;
             width: 100%;
-            height: 1px; /* Максимально тонкая линия */
+            height: 1px;
             background: var(--border);
             outline: none;
         }
@@ -63,7 +66,6 @@
             transform: scale(1.1);
         }
 
-        /* Анимации */
         .fade-in { animation: fadeIn 0.6s ease-out; }
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(4px); }
@@ -75,7 +77,6 @@
             color: #FFFFFF;
         }
 
-        /* Стили чекбоксов как в оригинале */
         input[type="checkbox"] {
             appearance: none;
             width: 44px;
@@ -103,7 +104,7 @@
         }
 
         #trialLabel {
-            position: fixed; top: 0; left: 0; width: 100%; height: 2px;
+            position: fixed; top: 0; left: 0; width: 100%; height: 3px;
             background: #000; z-index: 10000; transition: width 1s linear;
         }
     </style>
@@ -140,13 +141,11 @@
         </header>
 
         <main class="flex-grow p-6 pt-6 space-y-12">
-            <!-- Селектор услуг -->
             <div class="flex bg-gray-50 p-1 rounded-2xl border border-gray-100">
                 <button id="btnCr" onclick="setSvc('creation')" class="flex-1 py-4 text-[10px] font-bold uppercase tracking-widest rounded-xl transition-all tab-active">Плетение</button>
                 <button id="btnCo" onclick="setSvc('correction')" class="flex-1 py-4 text-[10px] font-bold uppercase tracking-widest rounded-xl transition-all text-gray-400">Коррекция</button>
             </div>
 
-            <!-- Ползунки -->
             <div class="space-y-12">
                 <div class="group">
                     <div class="flex justify-between items-end mb-4">
@@ -165,7 +164,6 @@
                 </div>
             </div>
 
-            <!-- Опции -->
             <div class="pt-8 border-t border-gray-50 space-y-6">
                 <label class="flex items-center justify-between py-2 cursor-pointer">
                     <span class="text-[11px] uppercase font-bold tracking-widest">Тупой кончик</span>
@@ -178,7 +176,6 @@
             </div>
         </main>
 
-        <!-- Футер с ценой -->
         <footer class="p-8 pb-12 bg-white sticky bottom-0 border-t border-black z-40">
             <div class="flex flex-col items-center">
                 <span class="text-[9px] uppercase tracking-[0.4em] text-gray-400 font-black mb-2">Общая стоимость</span>
@@ -194,7 +191,7 @@
     <div id="setModal" class="fixed inset-0 z-[6000] bg-white hidden p-8 overflow-y-auto">
         <div class="max-w-md mx-auto">
             <div class="flex justify-between items-center mb-12">
-                <span class="text-[0.7rem] font-black uppercase tracking-[0.5em] text-gray-300">Прайс-лист</span>
+                <span class="text-[0.7rem] font-black uppercase tracking-[0.5em] text-gray-300">Настройки цен</span>
                 <button onclick="toggleSettings(false)" class="text-4xl font-thin">&times;</button>
             </div>
             <div id="priceInputs" class="space-y-8"></div>
@@ -225,7 +222,7 @@
 
         let svc = 'creation', activeKey = null;
         let config = { p_base: 300, p_step: 200, p_corr: 150, p_blunt: 50, p_root: 30 };
-        let trialTime = 60;
+        let trialTime = 60; // 60 секунд на ознакомление
 
         function playSfx(isTick) {
             try {
@@ -241,10 +238,10 @@
             } catch(e) {}
         }
 
-        const getRef = (k) => doc(db, 'artifacts', 'rootscalc-pro', 'public', 'data', 'keys', k);
+        const getRef = (k) => doc(db, 'artifacts', 'dreadmetric-pro', 'public', 'data', 'keys', k);
 
         window.validateLicense = async (forced = null) => {
-            const key = forced || document.getElementById('keyInput').value.trim().toUpperCase();
+            const key = (forced || document.getElementById('keyInput').value).trim().toUpperCase();
             if(!key) return;
             
             const btn = document.getElementById('loginBtn');
@@ -252,7 +249,7 @@
             if(!forced) btn.disabled = true;
 
             try {
-                // Инициализация Auth ПЕРЕД запросом к Firestore
+                // Всегда сначала анонимный вход для доступа к Firestore
                 if(!auth.currentUser) await signInAnonymously(auth);
                 
                 const snap = await getDoc(getRef(key));
@@ -266,6 +263,7 @@
                 const devId = localStorage.getItem('dm_dev_id') || crypto.randomUUID();
                 localStorage.setItem('dm_dev_id', devId);
 
+                // Привязка 1 телефон = 1 устройство
                 if(!data.boundDeviceId || data.boundDeviceId === devId) {
                     if(!data.boundDeviceId) await updateDoc(getRef(key), { boundDeviceId: devId });
                     activeKey = key;
@@ -282,8 +280,7 @@
                     else showAuth();
                 }
             } catch(e) {
-                console.error(e);
-                if(!forced) { err.innerText = "Ошибка сети. Попробуйте снова."; btn.disabled = false; }
+                if(!forced) { err.innerText = "Ошибка сети. Проверьте соединение."; btn.disabled = false; }
             }
         };
 
@@ -310,16 +307,14 @@
             }
             if(document.getElementById('root').checked) total += c * config.p_root;
 
-            // Плавный счетчик
             const display = document.getElementById('totalPrice');
-            const start = parseInt(display.innerText.replace(/\s/g, '')) || 0;
-            const diff = total - start;
+            const startValue = parseInt(display.innerText.replace(/\s/g, '')) || 0;
             const startTime = performance.now();
 
             function update(t) {
                 const elapsed = t - startTime;
                 const progress = Math.min(elapsed / 300, 1);
-                const cur = Math.floor(start + diff * progress);
+                const cur = Math.floor(startValue + (total - startValue) * progress);
                 display.innerText = cur.toLocaleString();
                 if(progress < 1) requestAnimationFrame(update);
             }
@@ -370,7 +365,11 @@
                 const timer = setInterval(() => {
                     trialTime--;
                     bar.style.width = (trialTime / 60 * 100) + '%';
-                    if(trialTime <= 0) { clearInterval(timer); showAuth(); }
+                    if(trialTime <= 0) { 
+                        clearInterval(timer); 
+                        showAuth(); 
+                        bar.classList.add('hidden');
+                    }
                 }, 1000);
                 calculateTotal();
             }
