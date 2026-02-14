@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#111827">
+    <title>RootsCalc | Professional Tool</title>
+    
+    <script src="https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tailwindcss-cdn@3.4.1/tailwindcss.js"></script>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --charcoal: #111827;
+            --soft-gray: #9CA3AF;
+            --border: #E5E7EB;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #FFFFFF;
+            color: var(--charcoal);
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+            user-select: none;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        #splatterCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 999;
+        }
+
+        .sticky-header {
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(15px);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-title {
+            letter-spacing: 0.3em;
+            text-transform: uppercase;
+            font-weight: 700;
+            font-size: 0.8rem;
+        }
+
+        .info-btn {
+            font-size: 0.65rem;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            border: 1px solid var(--charcoal);
+            padding: 0.4rem 0.8rem;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .main-container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem 14rem;
+        }
+
+        .section-label {
+            letter-spacing: 0.25em;
+            text-transform: uppercase;
+            font-size: 0.6rem;
+            font-weight: 600;
+            color: var(--soft-gray);
+            margin-bottom: 1.5rem;
+            display: block;
+        }
+
+        .input-group {
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .service-selector {
+            display: flex;
+            gap: 1px;
+            background: var(--border);
+            border: 1px solid var(--border);
+            margin-bottom: 3rem;
+        }
+
+        .service-option {
+            flex: 1;
+            background: #FFF;
+            padding: 1rem;
+            text-align: center;
+            cursor: pointer;
+            text-transform: uppercase;
+            font-size: 0.65rem;
+            letter-spacing: 0.15em;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .service-option.active {
+            background: var(--charcoal);
+            color: #FFF;
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 1px;
+            background: var(--border);
+            outline: none;
+            margin: 1.5rem 0;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 24px;
+            height: 24px;
+            background: #FFFFFF;
+            border: 1px solid var(--charcoal);
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .display-value {
+            font-weight: 200;
+            font-size: 3.5rem;
+            line-height: 1;
+            letter-spacing: -0.02em;
+        }
+
+        .unit {
+            font-size: 0.9rem;
+            color: var(--soft-gray);
+            margin-left: 0.5rem;
+            font-weight: 300;
+        }
+
+        .custom-checkbox {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            padding: 0.75rem 0;
+        }
+
+        .custom-checkbox input { display: none; }
+
+        .checkmark {
+            width: 20px;
+            height: 20px;
+            border: 1px solid var(--charcoal);
+            margin-right: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .custom-checkbox input:checked + .checkmark { background: var(--charcoal); }
+        .custom-checkbox input:checked + .checkmark::after {
+            content: '';
+            width: 6px;
+            height: 6px;
+            background: white;
+        }
+
+        .sub-control {
+            max-height: 0;
+            overflow: hidden;
+            padding-left: 2rem;
+            border-left: 1px solid var(--border);
+            opacity: 0;
+            transition: all 0.4s ease;
+        }
+
+        .sub-control.active {
+            max-height: 500px;
+            opacity: 1;
+            margin-top: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .result-panel {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #FFFFFF;
+            border-top: 1px solid var(--charcoal);
+            padding: 2rem 1.5rem calc(2rem + env(safe-area-inset-bottom));
+            max-width: 600px;
+            margin: 0 auto;
+            z-index: 40;
+        }
+
+        .price-display {
+            font-weight: 100;
+            font-size: 4rem;
+            letter-spacing: -0.05em;
+            line-height: 1;
+        }
+
+        #modalOverlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: white;
+            z-index: 100;
+            display: none;
+            overflow-y: auto;
+            padding: 2rem 1.5rem;
+        }
+
+        .settings-table {
+            width: 100%;
+            margin-bottom: 2rem;
+        }
+
+        .settings-table td {
+            padding: 0.8rem 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .settings-table input {
+            width: 80px;
+            border: 1px solid var(--border);
+            padding: 0.3rem;
+            text-align: right;
+            font-weight: 600;
+            outline: none;
+        }
+
+        .save-btn {
+            background: var(--charcoal);
+            color: white;
+            width: 100%;
+            padding: 1.2rem;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            font-size: 0.75rem;
+            font-weight: 700;
+            transition: opacity 0.2s;
+        }
+
+        .save-btn:active { opacity: 0.7; }
+
+        .hidden-element { display: none !important; }
+
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="splatterCanvas"></canvas>
+
+    <header class="sticky-header">
+        <div class="header-title">RootsCalc</div>
+        <div class="info-btn" onclick="toggleModal(true)">Настройки</div>
+    </header>
+
+    <div id="modalOverlay">
+        <div class="max-w-xl mx-auto pb-20">
+            <div class="flex justify-between items-center mb-10">
+                <span class="section-label" style="margin-bottom:0">Конфигуратор прайса</span>
+                <button onclick="toggleModal(false)" class="text-3xl font-light p-2">&times;</button>
+            </div>
+
+            <div class="mb-10">
+                <h3 class="section-label">Плетение натуральных дред</h3>
+                <table class="settings-table">
+                    <tr>
+                        <td class="text-sm">База (до 10 см)</td>
+                        <td><input type="number" id="price_base" value="300"> ₽</td>
+                    </tr>
+                    <tr>
+                        <td class="text-sm">Шаг за каждые 10 см</td>
+                        <td><input type="number" id="price_step" value="200"> ₽</td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class="mb-10">
+                <h3 class="section-label">Коррекция и дополнения</h3>
+                <table class="settings-table">
+                    <tr>
+                        <td class="text-sm">Коррекция (база/шт)</td>
+                        <td><input type="number" id="price_corr_base" value="150"> ₽</td>
+                    </tr>
+                    <tr>
+                        <td class="text-sm">Тупой кончик (шт)</td>
+                        <td><input type="number" id="price_blunt" value="50"> ₽</td>
+                    </tr>
+                    <tr>
+                        <td class="text-sm">Сращивание (шт)</td>
+                        <td><input type="number" id="price_fusion" value="50"> ₽</td>
+                    </tr>
+                    <tr>
+                        <td class="text-sm">Корр. длины (за 10см)</td>
+                        <td><input type="number" id="price_corr_len" value="50"> ₽</td>
+                    </tr>
+                    <tr>
+                        <td class="text-sm">Прикорневое (шт)</td>
+                        <td><input type="number" id="price_root" value="30"> ₽</td>
+                    </tr>
+                </table>
+            </div>
+
+            <button onclick="saveSettings()" class="save-btn mb-12">Применить настройки</button>
+
+            <div class="border-t border-gray-100 pt-8 text-center">
+                <div class="text-[0.7rem] font-bold uppercase tracking-[0.4em] text-gray-900 mb-1">RootsCalc</div>
+                <div class="text-[0.6rem] text-gray-400 uppercase tracking-widest">Version 2.2.4 Professional Tools</div>
+            </div>
+        </div>
+    </div>
+
+    <main class="main-container">
+        <span class="section-label">00. Категория работ</span>
+        <div class="service-selector">
+            <div id="typeCreation" class="service-option active" onclick="setService('creation', event)">Плетение</div>
+            <div id="typeCorrection" class="service-option" onclick="setService('correction', event)">Коррекция</div>
+        </div>
+
+        <div class="input-group">
+            <span id="mainCountLabel" class="section-label">01. Количество дред</span>
+            <div class="flex items-baseline">
+                <span id="countVal" class="display-value">50</span>
+                <span class="unit">шт</span>
+            </div>
+            <input type="range" id="countRange" min="0" max="150" value="50">
+        </div>
+
+        <div id="groupLength" class="input-group">
+            <span class="section-label">02. Общая длина</span>
+            <div class="flex items-baseline">
+                <span id="lengthVal" class="display-value">10</span>
+                <span class="unit">см</span>
+            </div>
+            <input type="range" id="lengthRange" min="5" max="100" value="10">
+        </div>
+
+        <div id="groupAddons" class="input-group" style="border-bottom:none">
+            <span class="section-label">03. Дополнительные опции</span>
+            
+            <label class="custom-checkbox" onclick="handleCheck(event, 'bluntEndToggle')">
+                <input type="checkbox" id="bluntEndToggle">
+                <span class="checkmark"></span>
+                <span id="label_blunt" class="text-[0.65rem] font-bold uppercase tracking-widest">Тупой кончик</span>
+            </label>
+            <div id="bluntEndControl" class="sub-control">
+                <div class="flex items-baseline">
+                    <span id="bluntCountVal" class="display-value text-2xl">50</span>
+                    <span class="unit">шт</span>
+                </div>
+                <input type="range" id="bluntCountRange" min="0" max="150" value="50">
+            </div>
+
+            <label class="custom-checkbox mt-2" onclick="handleCheck(event, 'fusionToggle')">
+                <input type="checkbox" id="fusionToggle">
+                <span class="checkmark"></span>
+                <span id="label_fusion" class="text-[0.65rem] font-bold uppercase tracking-widest">Сращивание</span>
+            </label>
+            <div id="fusionControl" class="sub-control">
+                <div class="flex items-baseline">
+                    <span id="fusionCountVal" class="display-value text-2xl">50</span>
+                    <span class="unit">шт</span>
+                </div>
+                <input type="range" id="fusionCountRange" min="0" max="150" value="50">
+            </div>
+        </div>
+
+        <div id="groupAddonsCorr" class="input-group hidden-element" style="border-bottom:none">
+            <span class="section-label">03. Опции коррекции</span>
+            <label class="custom-checkbox" onclick="handleCheck(event, 'corrLengthToggle')">
+                <input type="checkbox" id="corrLengthToggle">
+                <span class="checkmark"></span>
+                <span id="label_corr_len" class="text-[0.65rem] font-bold uppercase tracking-widest">Коррекция длины</span>
+            </label>
+            <div id="corrLengthControl" class="sub-control">
+                <div class="mb-4">
+                    <span class="section-label" style="font-size:0.5rem">Количество</span>
+                    <div class="flex items-baseline"><span id="clcVal" class="display-value text-2xl">50</span><span class="unit">шт</span></div>
+                    <input type="range" id="clcRange" min="0" max="150" value="50">
+                </div>
+                <div>
+                    <span class="section-label" style="font-size:0.5rem">Длина коррекции</span>
+                    <div class="flex items-baseline"><span id="clcmVal" class="display-value text-2xl">10</span><span class="unit">см</span></div>
+                    <input type="range" id="clcmRange" min="10" max="100" step="10" value="10">
+                </div>
+            </div>
+
+            <label class="custom-checkbox mt-2" onclick="handleCheck(event, 'rootToggle')">
+                <input type="checkbox" id="rootToggle">
+                <span class="checkmark"></span>
+                <span id="label_root" class="text-[0.65rem] font-bold uppercase tracking-widest">Прикорневое валяние</span>
+            </label>
+            <div id="rootControl" class="sub-control">
+                <div class="flex items-baseline">
+                    <span id="rootCountVal" class="display-value text-2xl">50</span>
+                    <span class="unit">шт</span>
+                </div>
+                <input type="range" id="rootCountRange" min="0" max="150" value="50">
+            </div>
+        </div>
+    </main>
+
+    <div class="result-panel">
+        <span class="section-label">Итоговая стоимость</span>
+        <div class="flex items-baseline">
+            <span id="totalPrice" class="price-display">0</span>
+            <span class="text-xl font-light ml-4 opacity-50">₽</span>
+        </div>
+    </div>
+
+    <script>
+        // --- Аудио Движок: Бульканье воды ---
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        let audioCtx;
+
+        function playBubbleSound() {
+            if (!audioCtx) audioCtx = new AudioContext();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+
+            const startTime = audioCtx.currentTime;
+            
+            // Основной пузырек
+            const osc1 = audioCtx.createOscillator();
+            const gain1 = audioCtx.createGain();
+            osc1.type = 'sine';
+            osc1.frequency.setValueAtTime(450 + Math.random() * 150, startTime);
+            osc1.frequency.exponentialRampToValueAtTime(900 + Math.random() * 100, startTime + 0.04);
+            gain1.gain.setValueAtTime(0, startTime);
+            gain1.gain.linearRampToValueAtTime(0.12, startTime + 0.01);
+            gain1.gain.exponentialRampToValueAtTime(0.001, startTime + 0.07);
+            osc1.connect(gain1);
+            gain1.connect(audioCtx.destination);
+            osc1.start(startTime);
+            osc1.stop(startTime + 0.07);
+
+            // Вторичный резонанс для мягкости "влаги"
+            const osc2 = audioCtx.createOscillator();
+            const gain2 = audioCtx.createGain();
+            osc2.type = 'sine';
+            osc2.frequency.setValueAtTime(700 + Math.random() * 100, startTime + 0.02);
+            osc2.frequency.exponentialRampToValueAtTime(1300 + Math.random() * 150, startTime + 0.06);
+            gain2.gain.setValueAtTime(0, startTime + 0.02);
+            gain2.gain.linearRampToValueAtTime(0.06, startTime + 0.03);
+            gain2.gain.exponentialRampToValueAtTime(0.001, startTime + 0.09);
+            osc2.connect(gain2);
+            gain2.connect(audioCtx.destination);
+            osc2.start(startTime + 0.02);
+            osc2.stop(startTime + 0.09);
+        }
+
+        let config = {
+            price_base: 300, price_step: 200, price_corr_base: 150,
+            price_blunt: 50, price_fusion: 50, price_corr_len: 50, price_root: 30
+        };
+
+        function saveSettings() {
+            Object.keys(config).forEach(key => {
+                const el = document.getElementById(key);
+                if(el) config[key] = parseInt(el.value) || 0;
+            });
+            localStorage.setItem('rootscalc_cfg', JSON.stringify(config));
+            updateLabels();
+            calculateTotal();
+            toggleModal(false);
+            playBubbleSound();
+        }
+
+        function loadSettings() {
+            const saved = localStorage.getItem('rootscalc_cfg');
+            if(saved) {
+                config = JSON.parse(saved);
+                Object.keys(config).forEach(key => {
+                    const el = document.getElementById(key);
+                    if(el) el.value = config[key];
+                });
+            }
+            updateLabels();
+        }
+
+        function updateLabels() {
+            document.getElementById('label_blunt').innerText = `Тупой кончик (+${config.price_blunt}₽)`;
+            document.getElementById('label_fusion').innerText = `Сращивание (+${config.price_fusion}₽)`;
+            document.getElementById('label_corr_len').innerText = `Удлинение/Длина (+${config.price_corr_len}₽)`;
+            document.getElementById('label_root').innerText = `Прикорневое (+${config.price_root}₽)`;
+        }
+
+        // --- Частицы ---
+        const canvas = document.getElementById('splatterCanvas');
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+        function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+        window.addEventListener('resize', resize);
+        resize();
+
+        class Particle {
+            constructor(x, y) {
+                this.x = x; this.y = y;
+                this.size = Math.random() * 2 + 0.5;
+                this.speedX = Math.random() * 4 - 2;
+                this.speedY = Math.random() * 4 - 2;
+                this.opacity = 1;
+            }
+            update() { this.x += this.speedX; this.y += this.speedY; this.opacity -= 0.04; }
+            draw() { 
+                ctx.fillStyle = '#111827'; 
+                ctx.globalAlpha = this.opacity; 
+                ctx.beginPath(); 
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI*2); 
+                ctx.fill(); 
+            }
+        }
+
+        function triggerSplatter(e) {
+            const rect = e.target.getBoundingClientRect();
+            const x = rect.left + rect.width / 2;
+            const y = rect.top + rect.height / 2;
+            for(let i=0; i<6; i++) particles.push(new Particle(x, y));
+            playBubbleSound();
+        }
+
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            particles.forEach((p, i) => { p.update(); p.draw(); if(p.opacity <= 0) particles.splice(i, 1); });
+            requestAnimationFrame(animate);
+        }
+        animate();
+
+        // --- Интерфейс ---
+        let currentService = 'creation';
+        function toggleModal(s) { 
+            document.getElementById('modalOverlay').style.display = s ? 'block' : 'none'; 
+            if(s) playBubbleSound(); 
+        }
+
+        function setService(t, e) {
+            currentService = t;
+            document.getElementById('typeCreation').classList.toggle('active', t === 'creation');
+            document.getElementById('typeCorrection').classList.toggle('active', t === 'correction');
+            document.getElementById('groupLength').classList.toggle('hidden-element', t === 'correction');
+            document.getElementById('groupAddons').classList.toggle('hidden-element', t === 'correction');
+            document.getElementById('groupAddonsCorr').classList.toggle('hidden-element', t === 'creation');
+            triggerSplatter(e);
+            calculateTotal();
+        }
+
+        function handleCheck(e, id) {
+            triggerSplatter(e);
+            setTimeout(calculateTotal, 20);
+        }
+
+        const controls = [
+            'countRange', 'lengthRange', 'bluntCountRange', 'fusionCountRange',
+            'clcRange', 'clcmRange', 'rootCountRange',
+            'bluntEndToggle', 'fusionToggle', 'corrLengthToggle', 'rootToggle'
+        ];
+
+        controls.forEach(id => {
+            document.getElementById(id).addEventListener('input', (e) => {
+                if(e.target.type === 'range') playBubbleSound();
+                updateUI();
+                calculateTotal();
+            });
+        });
+
+        function updateUI() {
+            document.getElementById('countVal').innerText = document.getElementById('countRange').value;
+            document.getElementById('lengthVal').innerText = document.getElementById('lengthRange').value;
+            document.getElementById('bluntCountVal').innerText = document.getElementById('bluntCountRange').value;
+            document.getElementById('fusionCountVal').innerText = document.getElementById('fusionCountRange').value;
+            document.getElementById('clcVal').innerText = document.getElementById('clcRange').value;
+            document.getElementById('clcmVal').innerText = document.getElementById('clcmRange').value;
+            document.getElementById('rootCountVal').innerText = document.getElementById('rootCountRange').value;
+
+            document.getElementById('bluntEndControl').classList.toggle('active', document.getElementById('bluntEndToggle').checked);
+            document.getElementById('fusionControl').classList.toggle('active', document.getElementById('fusionToggle').checked);
+            document.getElementById('corrLengthControl').classList.toggle('active', document.getElementById('corrLengthToggle').checked);
+            document.getElementById('rootControl').classList.toggle('active', document.getElementById('rootToggle').checked);
+        }
+
+        function calculateTotal() {
+            let total = 0;
+            const count = parseInt(document.getElementById('countRange').value);
+
+            if(currentService === 'creation') {
+                const len = parseInt(document.getElementById('lengthRange').value);
+                let perUnit = config.price_base;
+                if(len > 10) perUnit += Math.ceil((len - 10) / 10) * config.price_step;
+                total = count * perUnit;
+                if(document.getElementById('bluntEndToggle').checked) 
+                    total += parseInt(document.getElementById('bluntCountRange').value) * config.price_blunt;
+                if(document.getElementById('fusionToggle').checked) 
+                    total += parseInt(document.getElementById('fusionCountRange').value) * config.price_fusion;
+            } else {
+                total = count * config.price_corr_base;
+                if(document.getElementById('corrLengthToggle').checked) {
+                    total += parseInt(document.getElementById('clcRange').value) * (parseInt(document.getElementById('clcmRange').value) / 10 * config.price_corr_len);
+                }
+                if(document.getElementById('rootToggle').checked) 
+                    total += parseInt(document.getElementById('rootCountRange').value) * config.price_root;
+            }
+
+            const display = document.getElementById('totalPrice');
+            const startValue = parseInt(display.innerText.replace(/\s/g, '')) || 0;
+            const duration = 300;
+            const startTime = performance.now();
+
+            function updatePrice(t) {
+                const elapsed = t - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                const cur = Math.floor(startValue + (total - startValue) * progress);
+                display.innerText = cur.toLocaleString();
+                if(progress < 1) requestAnimationFrame(updatePrice);
+            }
+            requestAnimationFrame(updatePrice);
+        }
+
+        loadSettings();
+        updateUI();
+        calculateTotal();
+        
+        if (typeof vkBridge !== 'undefined') {
+            vkBridge.send('VKWebAppInit').catch(() => {});
+        }
+    </script>
+</body>
+</html>
+
