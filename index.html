@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    
+    <!-- PWA Settings -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="DreadMetric">
+    <meta name="application-name" content="DreadMetric">
+    <meta name="theme-color" content="#111827">
+    <link rel="apple-touch-icon" href="https://via.placeholder.com/192/000000/FFFFFF?text=DM">
+    
+    <title>DreadMetric | Pro</title>
+    
+    <!-- Stable SDKs -->
+    <script src="https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tailwindcss-cdn@3.4.1/tailwindcss.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600&display=swap" rel="stylesheet">
+    
+    <style>
+        :root { --charcoal: #111827; --border: #E5E7EB; }
+        body { font-family: 'Inter', sans-serif; background-color: #FFFFFF; color: var(--charcoal); -webkit-tap-highlight-color: transparent; overflow-x: hidden; }
+        .hidden { display: none !important; }
+        
+        /* Custom Inputs */
+        input[type="range"] { -webkit-appearance: none; height: 1px; background: var(--border); outline: none; accent-color: var(--charcoal); }
+        input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 22px; height: 22px; background: #fff; border: 1px solid #000; border-radius: 50%; cursor: pointer; transition: 0.2s; }
+        input[type="range"]:active::-webkit-slider-thumb { transform: scale(1.2); background: #000; }
+
+        /* Animations */
+        .fade-in { animation: fadeIn 0.6s cubic-bezier(0.22, 1, 0.36, 1); }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .active-tab { background: var(--charcoal); color: white; }
+
+        /* Trial Timer UI */
+        #trialBanner { position: fixed; top: 0; left: 0; width: 100%; padding: 4px; background: #000; color: #fff; font-size: 8px; text-transform: uppercase; letter-spacing: 0.2em; text-align: center; z-index: 9999; }
+    </style>
+</head>
+<body>
+
+    <!-- ТАЙМЕР ОЗНАКОМЛЕНИЯ (виден только в триале) -->
+    <div id="trialBanner" class="hidden">Ознакомительный режим: осталось <span id="timeLeft">60</span> сек.</div>
+
+    <!-- ЭКРАН АВТОРИЗАЦИИ -->
+    <div id="authScreen" class="fixed inset-0 z-[1000] bg-white flex flex-col items-center justify-center p-8 hidden">
+        <div class="text-[0.6rem] tracking-[0.5em] uppercase font-bold mb-2 opacity-30 fade-in">DreadMetric Studio</div>
+        <h2 class="text-3xl font-light mb-12 tracking-tighter text-center fade-in">Активация доступа</h2>
+        
+        <div class="w-full max-w-xs space-y-4 fade-in">
+            <input id="keyInput" type="text" placeholder="Ваш лицензионный ключ" 
+                class="w-full p-5 border border-gray-100 rounded-2xl text-center uppercase tracking-[0.2em] text-sm outline-none focus:border-black transition-all bg-gray-50 font-medium">
+            <p id="loginError" class="text-red-500 text-[10px] uppercase text-center font-bold tracking-tight h-4"></p>
+            <button onclick="validateLicense()" id="loginBtn" 
+                class="w-full bg-black text-white p-5 text-[11px] font-bold uppercase tracking-[0.2em] rounded-2xl active:scale-95 transition-all shadow-xl shadow-gray-200">
+                Подтвердить
+            </button>
+        </div>
+        
+        <p class="mt-20 text-[9px] text-gray-400 uppercase tracking-[0.2em] text-center leading-relaxed">
+            Ключ привязывается к вашему устройству.<br>Доступ после пробного периода 1 мин.
+        </p>
+    </div>
+
+    <!-- ОСНОВНОЕ ПРИЛОЖЕНИЕ -->
+    <div id="mainApp" class="min-h-screen pb-40 fade-in">
+        <header class="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b p-5 flex justify-between items-center">
+            <div class="text-[0.7rem] uppercase tracking-[0.4em] font-black">DreadMetric</div>
+            <button onclick="toggleSettings(true)" class="text-[0.6rem] uppercase border border-black px-4 py-2 font-bold rounded-full hover:bg-black hover:text-white transition-all">Облако</button>
+        </header>
+
+        <main class="max-w-md mx-auto p-6 space-y-12">
+            <!-- Услуга -->
+            <section>
+                <div class="flex bg-gray-100 p-1 rounded-2xl">
+                    <button id="btnCr" onclick="setSvc('creation')" class="flex-1 py-4 text-[10px] font-bold uppercase rounded-xl transition-all active-tab">Плетение</button>
+                    <button id="btnCo" onclick="setSvc('correction')" class="flex-1 py-4 text-[10px] font-bold uppercase rounded-xl transition-all text-gray-400">Коррекция</button>
+                </div>
+            </section>
+
+            <!-- Параметры -->
+            <section class="space-y-12">
+                <div>
+                    <div class="flex justify-between items-end mb-4">
+                        <span class="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Количество</span>
+                        <span id="cVal" class="text-3xl font-light tracking-tighter">50</span>
+                    </div>
+                    <input type="range" id="cRange" min="1" max="150" value="50" oninput="calculateTotal()" class="w-full">
+                </div>
+
+                <div id="lGroup">
+                    <div class="flex justify-between items-end mb-4">
+                        <span class="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Длина волос (см)</span>
+                        <span id="lVal" class="text-3xl font-light tracking-tighter">10</span>
+                    </div>
+                    <input type="range" id="lRange" min="5" max="100" value="10" oninput="calculateTotal()" class="w-full">
+                </div>
+            </section>
+
+            <!-- Опции -->
+            <section class="space-y-6 pt-6 border-t border-gray-50">
+                <label class="flex items-center justify-between cursor-pointer">
+                    <span class="text-[11px] uppercase font-bold tracking-widest">Тупой кончик</span>
+                    <input type="checkbox" id="blunt" onchange="calculateTotal()" class="w-6 h-6 accent-black">
+                </label>
+                <label class="flex items-center justify-between cursor-pointer">
+                    <span class="text-[11px] uppercase font-bold tracking-widest">Прикорневое валяние</span>
+                    <input type="checkbox" id="root" onchange="calculateTotal()" class="w-6 h-6 accent-black">
+                </label>
+            </section>
+        </main>
+
+        <!-- ИТОГО -->
+        <div class="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-xl border-t border-black p-8 max-w-md mx-auto z-40">
+            <span class="text-[9px] uppercase tracking-widest text-gray-400 block font-bold mb-2">Общая стоимость</span>
+            <div class="flex items-baseline">
+                <span id="totalPrice" class="text-6xl font-thin tracking-tighter">0</span>
+                <span class="text-xl ml-4 opacity-20 font-light">₽</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ОКНО НАСТРОЕК -->
+    <div id="setModal" class="fixed inset-0 z-[2000] bg-white hidden p-8 overflow-y-auto">
+        <div class="flex justify-between items-center mb-12">
+            <span class="text-[0.7rem] font-bold uppercase tracking-widest text-gray-400">Настройка прайса</span>
+            <button onclick="toggleSettings(false)" class="text-4xl font-light">&times;</button>
+        </div>
+        <div id="priceInputs" class="space-y-8 max-w-xs mx-auto"></div>
+        <button onclick="saveToCloud()" id="saveBtn" class="w-full bg-black text-white p-6 uppercase font-bold text-[10px] tracking-widest mt-12 rounded-2xl shadow-xl">
+            Обновить облако
+        </button>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
+        import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBk99RmIn2McXhLlMV4huc2iTUGONc7Zig",
+            authDomain: "rootscalc-1c302.firebaseapp.com",
+            projectId: "rootscalc-1c302",
+            storageBucket: "rootscalc-1c302.firebasestorage.app",
+            messagingSenderId: "466620468252",
+            appId: "1:466620468252:web:e65ad3b731f4315f06a3d9"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        let svc = 'creation', activeKey = null;
+        let config = { p_base: 300, p_step: 200, p_corr: 150, p_blunt: 50, p_root: 30 };
+        let trialSeconds = 60;
+
+        const getRef = (k) => doc(db, 'artifacts', 'rootscalc-pro', 'public', 'data', 'keys', k);
+
+        function playTick() {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.frequency.setValueAtTime(700, ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(100, ctx.currentTime + 0.05);
+                gain.gain.setValueAtTime(0.03, ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.05);
+                osc.connect(gain); gain.connect(ctx.destination);
+                osc.start(); osc.stop(ctx.currentTime + 0.05);
+            } catch(e) {}
+        }
+
+        // Система ознакомления
+        function startTrial() {
+            const savedKey = localStorage.getItem('dm_saved_key');
+            if (savedKey) {
+                validateLicense(savedKey);
+                return;
+            }
+
+            document.getElementById('trialBanner').classList.remove('hidden');
+            const timer = setInterval(() => {
+                trialSeconds--;
+                document.getElementById('timeLeft').innerText = trialSeconds;
+                if (trialSeconds <= 0) {
+                    clearInterval(timer);
+                    showAuth();
+                }
+            }, 1000);
+        }
+
+        function showAuth() {
+            document.getElementById('trialBanner').classList.add('hidden');
+            document.getElementById('mainApp').classList.add('hidden');
+            document.getElementById('authScreen').classList.remove('hidden');
+        }
+
+        window.validateLicense = async (forcedKey = null) => {
+            playTick();
+            const key = forcedKey || document.getElementById('keyInput').value.trim().toUpperCase();
+            if(!key) return;
+            
+            const btn = document.getElementById('loginBtn');
+            const err = document.getElementById('loginError');
+            btn.disabled = true;
+            if(!forcedKey) err.innerText = "Проверка лицензии...";
+
+            try {
+                await signInAnonymously(auth);
+                const snap = await getDoc(getRef(key));
+
+                if(!snap.exists()) {
+                    if(!forcedKey) err.innerText = "Ключ не найден";
+                    btn.disabled = false;
+                    if(forcedKey) showAuth();
+                    return;
+                }
+
+                const data = snap.data();
+                let devId = localStorage.getItem('dm_dev_id') || crypto.randomUUID();
+                localStorage.setItem('dm_dev_id', devId);
+
+                if(!data.boundDeviceId || data.boundDeviceId === devId) {
+                    if(!data.boundDeviceId) await updateDoc(getRef(key), { boundDeviceId: devId, activatedAt: new Date() });
+                    activeKey = key;
+                    if(data.config) config = data.config;
+                    localStorage.setItem('dm_saved_key', key);
+                    
+                    document.getElementById('authScreen').classList.add('hidden');
+                    document.getElementById('trialBanner').classList.add('hidden');
+                    document.getElementById('mainApp').classList.remove('hidden');
+                    renderInputs();
+                    calculateTotal();
+                } else {
+                    if(!forcedKey) err.innerText = "Ключ занят другим устройством";
+                    btn.disabled = false;
+                    if(forcedKey) showAuth();
+                }
+            } catch(e) {
+                if(!forcedKey) err.innerText = "Ошибка сети";
+                btn.disabled = false;
+            }
+        };
+
+        window.calculateTotal = () => {
+            playTick();
+            const c = parseInt(document.getElementById('cRange').value);
+            const l = parseInt(document.getElementById('lRange').value);
+            document.getElementById('cVal').innerText = c;
+            document.getElementById('lVal').innerText = l;
+
+            let total = 0;
+            if(svc === 'creation') {
+                let p = config.p_base;
+                if(l > 10) p += Math.ceil((l - 10) / 10) * config.p_step;
+                total = c * p;
+                if(document.getElementById('blunt').checked) total += c * config.p_blunt;
+            } else {
+                total = c * config.p_corr;
+            }
+            if(document.getElementById('root').checked) total += c * config.p_root;
+
+            const display = document.getElementById('totalPrice');
+            const startVal = parseInt(display.innerText.replace(/\s/g, '')) || 0;
+            const duration = 400;
+            const startTime = performance.now();
+
+            function update(t) {
+                const elapsed = t - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                const current = Math.floor(startVal + (total - startVal) * progress);
+                display.innerText = current.toLocaleString();
+                if(progress < 1) requestAnimationFrame(update);
+            }
+            requestAnimationFrame(update);
+        };
+
+        window.setSvc = (s) => {
+            playTick();
+            svc = s;
+            document.getElementById('btnCr').className = s === 'creation' ? 'flex-1 py-4 text-[10px] font-bold uppercase rounded-xl active-tab' : 'flex-1 py-4 text-[10px] font-bold uppercase rounded-xl text-gray-400';
+            document.getElementById('btnCo').className = s === 'correction' ? 'flex-1 py-4 text-[10px] font-bold uppercase rounded-xl active-tab' : 'flex-1 py-4 text-[10px] font-bold uppercase rounded-xl text-gray-400';
+            document.getElementById('lGroup').classList.toggle('hidden', s === 'correction');
+            calculateTotal();
+        };
+
+        window.toggleSettings = (v) => { playTick(); document.getElementById('setModal').classList.toggle('hidden', !v); };
+
+        function renderInputs() {
+            const box = document.getElementById('priceInputs');
+            const labels = { p_base: 'Базовая цена', p_step: 'Шаг длины (10см)', p_corr: 'Коррекция (шт)', p_blunt: 'Кончик (шт)', p_root: 'Валяние (шт)' };
+            box.innerHTML = Object.keys(config).map(k => `
+                <div class="flex justify-between items-center border-b border-gray-100 pb-3">
+                    <span class="text-[10px] uppercase font-bold text-gray-400 tracking-widest">${labels[k]}</span>
+                    <input type="number" id="inp_${k}" value="${config[k]}" class="text-right w-24 outline-none font-bold text-lg">
+                </div>
+            `).join('');
+        }
+
+        window.saveToCloud = async () => {
+            playTick();
+            const b = document.getElementById('saveBtn');
+            b.innerText = "Сохранение...";
+            Object.keys(config).forEach(k => config[k] = parseInt(document.getElementById('inp_'+k).value) || 0);
+            try {
+                await updateDoc(getRef(activeKey), { config: config });
+                toggleSettings(false);
+                calculateTotal();
+            } catch(e) { alert("Необходима активация для сохранения"); showAuth(); }
+            b.innerText = "Обновить облако";
+        };
+
+        window.onload = () => {
+            startTrial();
+            if (typeof vkBridge !== 'undefined') vkBridge.send('VKWebAppInit').catch(()=>{});
+            
+            // Basic PWA Service Worker Registration
+            if ('serviceWorker' in navigator) {
+                window.addEventListener('load', () => {
+                    navigator.serviceWorker.register('/sw.js').catch(() => {});
+                });
+            }
+        };
+    </script>
+</body>
+</html>
