@@ -19,7 +19,6 @@
     <script src="https://cdn.jsdelivr.net/npm/tailwindcss-cdn@3.4.1/tailwindcss.js"></script>
     
     <!-- Firebase SDKs -->
-    
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -39,7 +38,7 @@
         const db = getFirestore(app);
         const appId = 'rootscalc-pro';
 
-        window.firebaseTools = { db, auth, appId, doc, getDoc, updateDoc, signInAnonymously, setDoc };
+        window.firebaseTools = { db, auth, appId, doc, getDoc, updateDoc, setDoc, signInAnonymously };
 
         signInAnonymously(auth).catch(err => console.error("Firebase Auth Error:", err.code));
     </script>
@@ -106,7 +105,7 @@
 
     <header class="sticky-header">
         <div class="header-title">DreadMetric</div>
-        <div id="demoTimer" class="demo-timer">DEMO 01:00</div>
+        <div id="demoTimer" class="demo-timer">DEMO 05:00</div>
         <div class="info-btn" onclick="toggleModal(true)">Настройки</div>
     </header>
 
@@ -134,10 +133,11 @@
                 </table>
             </div>
             <button onclick="saveSettings()" class="save-btn mb-12">Применить настройки</button>
-<div class="border-t border-gray-100 pt-8 text-center">
+            <div class="border-t border-gray-100 pt-8 text-center">
                 <div class="text-[0.7rem] font-bold uppercase tracking-[0.4em] text-gray-900 mb-1">DreadMetric</div>
                 <div class="text-[0.6rem] text-gray-400 uppercase tracking-widest">Version 3.1.0 Professional Edition</div>
-            </div>        </div>
+            </div>        
+        </div>
     </div>
 
     <main class="main-container">
@@ -219,76 +219,111 @@
             localStorage.setItem('dm_device_id', deviceId);
             document.getElementById('deviceIdLabel').innerText = deviceId;
 
- // --- Состояние активации и ТАЙМЕР (Advanced Cloud Sync) ---
-let isActivated = localStorage.getItem('dm_active') === 'true';
-const DEMO_DURATION_MS = 5 * 60 * 1000; // Увеличено до 5 минут
+            // --- Состояние активации и УЛУЧШЕННЫЙ ТАЙМЕР ---
+            let isActivated = localStorage.getItem('dm_active') === 'true';
+            const DEMO_DURATION_SECONDS = 300; // 5 МИНУТ
 
-window.initSecurity = async function() {
-    if (isActivated) {
-        document.getElementById('demoTimer').style.display = 'none';
-        return;
-    }
+            window.initSecurity = async function() {
+                if (isActivated) {
+                    document.getElementById('demoTimer').style.display = 'none';
+                    return;
+                }
+                
+                const timerEl = document.getElementById('demoTimer');
+                const lockOverlay = document.getElementById('lockOverlay');
 
-    const { db, appId, doc, getDoc, updateDoc, auth, signInAnonymously } = window.firebaseTools;
-    const timerEl = document.getElementById('demoTimer');
-    const lockOverlay = document.getElementById('lockOverlay');
+                // Пытаемся синхронизировать время с Firebase
+                let firstLaunch;
+                try {
+                    const { db, appId, doc, getDoc, setDoc, auth, signInAnonymously } = window.firebaseTools;
+                    
+                    // Ждем анонимный вход
+                    if (!auth.currentUser) await signInAnonymously(auth);
 
-    try {
-        // 1. Анонимная авторизация для доступа к БД
-        if (!auth.currentUser) await signInAnonymously(auth);
+                    const deviceRef = doc(db, 'artifacts', appId, 'public', 'data', 'devices', deviceId);
+                    const snap = await getDoc(deviceRef);
 
-        // 2. Ссылка на документ устройства в облаке
-        const deviceRef = doc(db, 'artifacts', appId, 'public', 'data', 'devices', deviceId);
-        const snap = await getDoc(deviceRef);
-        
-        let firstLaunchTime;
+                    if (snap.exists() && snap.data().firstLaunch) {
+                        firstLaunch = snap.data().firstLaunch;
+                    } else {
+                        // Если записи нет, создаем новую
+                        firstLaunch = Date.now();
+                        await setDoc(deviceRef, {
+                            firstLaunch: firstLaunch,
+                            deviceId: deviceId,
+                            createdAt: new Date().toISOString()
+                        });
+                        localStorage.setItem('dm_first_launch', firstLaunch);
+                    }
+                } catch (e) {
+                    console.warn("Cloud Security Sync Error:", e);
+                    // Фоллбек на локальное хранилище при ошибке сети
+                    firstLaunch = parseInt(localStorage.getItem('dm_first_launch')) || Date.now();
+                    localStorage.setItem('dm_first_launch', firstLaunch);
+                }
 
-        if (snap.exists() && snap.data().firstLaunch) {
-            // Если устройство уже известно базе — берем время оттуда
-            firstLaunchTime = snap.data().firstLaunch;
-        } else {
-            // Если новое устройство — фиксируем время и отправляем в облако
-            firstLaunchTime = Date.now();
-            // Используем setDoc (через updateDoc с опцией или просто запись)
-            // В вашем конфиге проброшен updateDoc, для создания нового лучше иметь доступ к setDoc, 
-            // но мы попробуем через ваш проброшенный updateDoc (он сработает если объект инициализирован)
-            await updateDoc(deviceRef, { 
-                firstLaunch: firstLaunchTime, 
-                lastSeen: new Date().toISOString() 
-            }).catch(async () => {
-                // Если документа нет, Firebase может выдать ошибку на update. 
-                // В идеале здесь нужен setDoc, но для текущей логики мы сохраним локально как бэкап
-            });
-            localStorage.setItem('dm_first_launch', firstLaunchTime);
-        }
+                const runTimer = () => {
+                    const now = Date.now();
+                    const elapsed = Math.floor((now - firstLaunch) / 1000);
+                    const timeLeft = Math.max(0, DEMO_DURATION_SECONDS - elapsed);
 
-        // 3. Запуск цикла таймера
-        const interval = setInterval(() => {
-            const now = Date.now();
-            const elapsed = now - firstLaunchTime;
-            const remaining = Math.max(0, DEMO_DURATION_MS - elapsed);
+                    if (timeLeft <= 0) {
+                        timerEl.innerText = "DEMO 00:00";
+                        lockOverlay.style.display = 'flex';
+                        return true;
+                    }
 
-            if (remaining <= 0) {
-                clearInterval(interval);
-                timerEl.innerText = "DEMO 00:00";
-                lockOverlay.style.display = 'flex';
-                localStorage.setItem('dm_time_left', '0');
-            } else {
-                const totalSeconds = Math.floor(remaining / 1000);
-                const m = Math.floor(totalSeconds / 60);
-                const s = totalSeconds % 60;
-                timerEl.innerText = `DEMO ${m}:${s < 10 ? '0' : ''}${s}`;
-            }
-        }, 1000);
+                    const m = Math.floor(timeLeft / 60);
+                    const s = timeLeft % 60;
+                    timerEl.innerText = `DEMO ${m}:${s < 10 ? '0' : ''}${s}`;
+                    return false;
+                };
 
-    } catch (error) {
-        console.error("Security Sync Error:", error);
-        // Фоллбек (запасной вариант) на локальное хранилище, если нет интернета
-        let localFallback = localStorage.getItem('dm_first_launch') || Date.now();
-        localStorage.setItem('dm_first_launch', localFallback);
-        // ... запуск обычного таймера на локальных данных
-    }
-};
+                // Запускаем цикл
+                if (!runTimer()) {
+                    const interval = setInterval(() => {
+                        if (runTimer()) clearInterval(interval);
+                    }, 1000);
+                }
+            };
+
+            window.checkKey = async function() {
+                const btn = document.getElementById('activateBtn');
+                const errEl = document.getElementById('keyError');
+                const key = document.getElementById('activationKey').value.trim().toUpperCase();
+                
+                if (!key) return;
+                btn.disabled = true;
+                btn.innerText = "Проверка...";
+                errEl.classList.add('hidden');
+
+                try {
+                    const { db, appId, doc, getDoc, updateDoc, auth, signInAnonymously } = window.firebaseTools;
+                    if (!auth.currentUser) await signInAnonymously(auth);
+
+                    const keyRef = doc(db, 'artifacts', appId, 'public', 'data', 'keys', key);
+                    const snap = await getDoc(keyRef);
+
+                    if (snap.exists()) {
+                        const data = snap.data();
+                        if (!data.usedBy || data.usedBy === deviceId) {
+                            await updateDoc(keyRef, { usedBy: deviceId, activatedAt: new Date().toISOString() });
+                            localStorage.setItem('dm_active', 'true');
+                            location.reload();
+                        } else {
+                            throw new Error("Ключ уже активирован");
+                        }
+                    } else {
+                        throw new Error("Неверный ключ");
+                    }
+                } catch (e) {
+                    errEl.innerText = e.message;
+                    errEl.classList.remove('hidden');
+                } finally {
+                    btn.disabled = false;
+                    btn.innerText = "Активировать";
+                }
+            };
 
             // --- Аудио-эффекты ---
             let audioCtx;
@@ -328,7 +363,7 @@ window.initSecurity = async function() {
                 document.getElementById('label_root').innerText = `Прикорневое (+${config.price_root}₽)`;
             }
 
-            // --- Анимация Частиц (ФИКС ОШИБКИ Identifier 'P') ---
+            // --- Анимация Частиц ---
             const canvas = document.getElementById('splatterCanvas');
             const ctx = canvas.getContext('2d');
             let particles = [];
