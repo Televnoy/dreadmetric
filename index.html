@@ -238,7 +238,7 @@
             } catch(e) {}
         }
 
-        const getRef = (k) => doc(db, 'artifacts', 'dreadmetric-pro', 'public', 'data', 'keys', k);
+        const getRef = (k) => doc(db, 'artifacts', 'rootscalc-pro', 'public', 'data', 'keys', k);
 
         window.validateLicense = async (forced = null) => {
             const key = (forced || document.getElementById('keyInput').value).trim().toUpperCase();
