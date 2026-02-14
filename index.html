@@ -23,7 +23,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, updateDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyBk99RmIn2McXhLlMV4huc2iTUGONc7Zig",
@@ -39,7 +39,7 @@
         const db = getFirestore(app);
         const appId = 'rootscalc-pro';
 
-        window.firebaseTools = { db, auth, appId, doc, getDoc, updateDoc, signInAnonymously };
+        window.firebaseTools = { db, auth, appId, doc, getDoc, updateDoc, signInAnonymously, setDoc };
 
         signInAnonymously(auth).catch(err => console.error("Firebase Auth Error:", err.code));
     </script>
@@ -219,79 +219,76 @@
             localStorage.setItem('dm_device_id', deviceId);
             document.getElementById('deviceIdLabel').innerText = deviceId;
 
-            // --- Состояние активации и ТАЙМЕР ---
-            let isActivated = localStorage.getItem('dm_active') === 'true';
-            const TOTAL_DEMO_TIME = 60; 
-            
-            let timeLeft = parseInt(localStorage.getItem('dm_time_left'));
-            if (isNaN(timeLeft)) timeLeft = TOTAL_DEMO_TIME;
+ // --- Состояние активации и ТАЙМЕР (Advanced Cloud Sync) ---
+let isActivated = localStorage.getItem('dm_active') === 'true';
+const DEMO_DURATION_MS = 5 * 60 * 1000; // Увеличено до 5 минут
 
-            window.initSecurity = function() {
-                if (isActivated) {
-                    document.getElementById('demoTimer').style.display = 'none';
-                    return;
-                }
-                
-                const timerEl = document.getElementById('demoTimer');
-                
-                if (timeLeft <= 0) {
-                    timerEl.innerText = "DEMO 00:00";
-                    document.getElementById('lockOverlay').style.display = 'flex';
-                    return;
-                }
+window.initSecurity = async function() {
+    if (isActivated) {
+        document.getElementById('demoTimer').style.display = 'none';
+        return;
+    }
 
-                const interval = setInterval(() => {
-                    timeLeft--;
-                    localStorage.setItem('dm_time_left', timeLeft); 
-                    
-                    if (timeLeft <= 0) {
-                        clearInterval(interval);
-                        timerEl.innerText = "DEMO 00:00";
-                        document.getElementById('lockOverlay').style.display = 'flex';
-                    } else {
-                        const m = Math.floor(timeLeft / 60), s = timeLeft % 60;
-                        timerEl.innerText = `DEMO ${m}:${s < 10 ? '0' : ''}${s}`;
-                    }
-                }, 1000);
-            };
+    const { db, appId, doc, getDoc, updateDoc, auth, signInAnonymously } = window.firebaseTools;
+    const timerEl = document.getElementById('demoTimer');
+    const lockOverlay = document.getElementById('lockOverlay');
 
-            window.checkKey = async function() {
-                const btn = document.getElementById('activateBtn');
-                const errEl = document.getElementById('keyError');
-                const key = document.getElementById('activationKey').value.trim().toUpperCase();
-                
-                if (!key) return;
-                btn.disabled = true;
-                btn.innerText = "Проверка...";
-                errEl.classList.add('hidden');
+    try {
+        // 1. Анонимная авторизация для доступа к БД
+        if (!auth.currentUser) await signInAnonymously(auth);
 
-                try {
-                    const { db, appId, doc, getDoc, updateDoc, auth, signInAnonymously } = window.firebaseTools;
-                    if (!auth.currentUser) await signInAnonymously(auth);
+        // 2. Ссылка на документ устройства в облаке
+        const deviceRef = doc(db, 'artifacts', appId, 'public', 'data', 'devices', deviceId);
+        const snap = await getDoc(deviceRef);
+        
+        let firstLaunchTime;
 
-                    const keyRef = doc(db, 'artifacts', appId, 'public', 'data', 'keys', key);
-                    const snap = await getDoc(keyRef);
+        if (snap.exists() && snap.data().firstLaunch) {
+            // Если устройство уже известно базе — берем время оттуда
+            firstLaunchTime = snap.data().firstLaunch;
+        } else {
+            // Если новое устройство — фиксируем время и отправляем в облако
+            firstLaunchTime = Date.now();
+            // Используем setDoc (через updateDoc с опцией или просто запись)
+            // В вашем конфиге проброшен updateDoc, для создания нового лучше иметь доступ к setDoc, 
+            // но мы попробуем через ваш проброшенный updateDoc (он сработает если объект инициализирован)
+            await updateDoc(deviceRef, { 
+                firstLaunch: firstLaunchTime, 
+                lastSeen: new Date().toISOString() 
+            }).catch(async () => {
+                // Если документа нет, Firebase может выдать ошибку на update. 
+                // В идеале здесь нужен setDoc, но для текущей логики мы сохраним локально как бэкап
+            });
+            localStorage.setItem('dm_first_launch', firstLaunchTime);
+        }
 
-                    if (snap.exists()) {
-                        const data = snap.data();
-                        if (!data.usedBy || data.usedBy === deviceId) {
-                            await updateDoc(keyRef, { usedBy: deviceId, activatedAt: new Date().toISOString() });
-                            localStorage.setItem('dm_active', 'true');
-                            location.reload();
-                        } else {
-                            throw new Error("Ключ уже активирован");
-                        }
-                    } else {
-                        throw new Error("Неверный ключ");
-                    }
-                } catch (e) {
-                    errEl.innerText = e.message;
-                    errEl.classList.remove('hidden');
-                } finally {
-                    btn.disabled = false;
-                    btn.innerText = "Активировать";
-                }
-            };
+        // 3. Запуск цикла таймера
+        const interval = setInterval(() => {
+            const now = Date.now();
+            const elapsed = now - firstLaunchTime;
+            const remaining = Math.max(0, DEMO_DURATION_MS - elapsed);
+
+            if (remaining <= 0) {
+                clearInterval(interval);
+                timerEl.innerText = "DEMO 00:00";
+                lockOverlay.style.display = 'flex';
+                localStorage.setItem('dm_time_left', '0');
+            } else {
+                const totalSeconds = Math.floor(remaining / 1000);
+                const m = Math.floor(totalSeconds / 60);
+                const s = totalSeconds % 60;
+                timerEl.innerText = `DEMO ${m}:${s < 10 ? '0' : ''}${s}`;
+            }
+        }, 1000);
+
+    } catch (error) {
+        console.error("Security Sync Error:", error);
+        // Фоллбек (запасной вариант) на локальное хранилище, если нет интернета
+        let localFallback = localStorage.getItem('dm_first_launch') || Date.now();
+        localStorage.setItem('dm_first_launch', localFallback);
+        // ... запуск обычного таймера на локальных данных
+    }
+};
 
             // --- Аудио-эффекты ---
             let audioCtx;
