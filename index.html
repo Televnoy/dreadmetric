@@ -8,21 +8,14 @@
     <meta name="theme-color" content="#111827">
     <title>DreadMetric | Professional Tool</title>
     
-    <!-- PWA Assets -->
-    <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIkRyZWFkTWV0cmljIiwKICAic2hvcnRfbmFtZSI6ICJEcmVhZCIsCiAgInN0YXJ0X3VybCI6ICIuIiwKICAiZGlzcGxheSI6ICJzdGFuZGFsb25lIiwKICAiYmFja2dyb3VuZF9jb2xvciI6ICIjRkZGRkZGIiwKICAidGhlbWVfY29sb3IiOiAiIzExMTgyNyIsCiAgImljb25zIjogWwogICAgewogICAgICAic3JjIjogImZhdmljb24uc3ZnIiwKICAgICAgInNpemVzIjogImFueSIsCiAgICAgICJ0eXBlIjogImltYWdlL3N2Zyt4bWwiCiAgICB9LAogICAgewogICAgICAic3JjIjogImljb24tMTkyLnBuZyIsCiAgICAgICJzaXplcyI6ICIxOTJ4MTkyIiwKICAgICAgInR5cGUiOiAiaW1hZ2UvcG5nIgogICAgfSwKICAgIHsKICAgICAgInNyYyI6ICJpY29uLTUxMi5wbmciLAogICAgICAic2l6ZXMiOiAiNTEyeDUxMiIsCiAgICAgICJ0eXBlIjogImltYWdlL3BuZyIKICAgIH0KICBdCn0=">
-    <link rel="icon" type="image/svg+xml" href="favicon.svg">
-    <link rel="apple-touch-icon" href="icon-192.png">
-
     <script src="https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/tailwindcss-cdn@3.4.1/tailwindcss.js"></script>
     
-    <!-- Firebase SDKs -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Твои проверенные данные Firebase
         const firebaseConfig = {
             apiKey: "AIzaSyBk99RmIn2McXhLlMV4huc2iTUGONc7Zig",
             authDomain: "rootscalc-1c302.firebaseapp.com",
@@ -37,14 +30,9 @@
         const db = getFirestore(app);
         const appId = 'rootscalc-pro';
 
-        // Экспорт в глобальную область для использования в обычных скриптах
-        window.firebaseTools = {
-            db, auth, appId,
-            doc, getDoc, updateDoc, signInAnonymously
-        };
+        window.firebaseTools = { db, auth, appId, doc, getDoc, updateDoc, signInAnonymously };
 
-        // Сразу инициируем анонимный вход (Правило 3)
-        signInAnonymously(auth).catch(err => console.error("Firebase Auth Error:", err));
+        signInAnonymously(auth).catch(err => console.error("Firebase Auth Error:", err.code));
     </script>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -52,304 +40,55 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600&display=swap" rel="stylesheet">
     
     <style>
-        :root {
-            --charcoal: #111827;
-            --soft-gray: #9CA3AF;
-            --border: #E5E7EB;
-        }
-
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #FFFFFF;
-            color: var(--charcoal);
-            margin: 0;
-            padding: 0;
-            overflow-x: hidden;
-            user-select: none;
-            -webkit-font-smoothing: antialiased;
-        }
-
-        #splatterCanvas {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 999;
-        }
-
-        .sticky-header {
-            position: sticky;
-            top: 0;
-            z-index: 50;
-            background: rgba(255, 255, 255, 0.85);
-            backdrop-filter: blur(15px);
-            border-bottom: 1px solid var(--border);
-            padding: 1rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .header-title {
-            letter-spacing: 0.3em;
-            text-transform: uppercase;
-            font-weight: 700;
-            font-size: 0.8rem;
-        }
-
-        .demo-timer {
-            font-size: 0.7rem;
-            font-weight: 700;
-            color: #EF4444;
-            letter-spacing: 0.1em;
-        }
-
-        .info-btn {
-            font-size: 0.65rem;
-            letter-spacing: 0.1em;
-            text-transform: uppercase;
-            border: 1px solid var(--charcoal);
-            padding: 0.4rem 0.8rem;
-            cursor: pointer;
-            font-weight: 600;
-        }
-
-        .main-container {
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 2rem 1.5rem 14rem;
-        }
-
-        #lockOverlay {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: white;
-            z-index: 2000;
-            display: none;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            padding: 2rem;
-            text-align: center;
-        }
-
-        .key-input {
-            width: 100%;
-            max-width: 300px;
-            border: 1px solid var(--charcoal);
-            padding: 1rem;
-            margin: 1.5rem 0;
-            text-align: center;
-            font-family: monospace;
-            letter-spacing: 2px;
-            text-transform: uppercase;
-            outline: none;
-        }
-
-        .section-label {
-            letter-spacing: 0.25em;
-            text-transform: uppercase;
-            font-size: 0.6rem;
-            font-weight: 600;
-            color: var(--soft-gray);
-            margin-bottom: 1.5rem;
-            display: block;
-        }
-
-        .input-group {
-            border-bottom: 1px solid var(--border);
-            padding-bottom: 2rem;
-            margin-bottom: 2rem;
-        }
-
-        .service-selector {
-            display: flex;
-            gap: 1px;
-            background: var(--border);
-            border: 1px solid var(--border);
-            margin-bottom: 3rem;
-        }
-
-        .service-option {
-            flex: 1;
-            background: #FFF;
-            padding: 1rem;
-            text-align: center;
-            cursor: pointer;
-            text-transform: uppercase;
-            font-size: 0.65rem;
-            letter-spacing: 0.15em;
-            font-weight: 500;
-            transition: all 0.2s;
-        }
-
-        .service-option.active {
-            background: var(--charcoal);
-            color: #FFF;
-        }
-
-        input[type="range"] {
-            -webkit-appearance: none;
-            width: 100%;
-            height: 1px;
-            background: var(--border);
-            outline: none;
-            margin: 1.5rem 0;
-        }
-
-        input[type="range"]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            width: 24px;
-            height: 24px;
-            background: #FFFFFF;
-            border: 1px solid var(--charcoal);
-            border-radius: 50%;
-            cursor: pointer;
-        }
-
-        .display-value {
-            font-weight: 200;
-            font-size: 3.5rem;
-            line-height: 1;
-            letter-spacing: -0.02em;
-        }
-
-        .unit {
-            font-size: 0.9rem;
-            color: var(--soft-gray);
-            margin-left: 0.5rem;
-            font-weight: 300;
-        }
-
-        .custom-checkbox {
-            display: flex;
-            align-items: center;
-            cursor: pointer;
-            padding: 0.75rem 0;
-        }
-
+        :root { --charcoal: #111827; --soft-gray: #9CA3AF; --border: #E5E7EB; }
+        body { font-family: 'Inter', sans-serif; background-color: #FFFFFF; color: var(--charcoal); margin: 0; padding: 0; overflow-x: hidden; user-select: none; -webkit-font-smoothing: antialiased; }
+        #splatterCanvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 999; }
+        .sticky-header { position: sticky; top: 0; z-index: 50; background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(15px); border-bottom: 1px solid var(--border); padding: 1rem; display: flex; justify-content: space-between; align-items: center; }
+        .header-title { letter-spacing: 0.3em; text-transform: uppercase; font-weight: 700; font-size: 0.8rem; }
+        .demo-timer { font-size: 0.7rem; font-weight: 700; color: #EF4444; letter-spacing: 0.1em; }
+        .info-btn { font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; border: 1px solid var(--charcoal); padding: 0.4rem 0.8rem; cursor: pointer; font-weight: 600; }
+        .main-container { max-width: 600px; margin: 0 auto; padding: 2rem 1.5rem 14rem; }
+        #lockOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 2000; display: none; flex-direction: column; justify-content: center; align-items: center; padding: 2rem; text-align: center; }
+        .key-input { width: 100%; max-width: 300px; border: 1px solid var(--charcoal); padding: 1rem; margin: 1.5rem 0; text-align: center; font-family: monospace; letter-spacing: 2px; text-transform: uppercase; outline: none; }
+        .section-label { letter-spacing: 0.25em; text-transform: uppercase; font-size: 0.6rem; font-weight: 600; color: var(--soft-gray); margin-bottom: 1.5rem; display: block; }
+        .input-group { border-bottom: 1px solid var(--border); padding-bottom: 2rem; margin-bottom: 2rem; }
+        .service-selector { display: flex; gap: 1px; background: var(--border); border: 1px solid var(--border); margin-bottom: 3rem; }
+        .service-option { flex: 1; background: #FFF; padding: 1rem; text-align: center; cursor: pointer; text-transform: uppercase; font-size: 0.65rem; letter-spacing: 0.15em; font-weight: 500; transition: all 0.2s; }
+        .service-option.active { background: var(--charcoal); color: #FFF; }
+        input[type="range"] { -webkit-appearance: none; width: 100%; height: 1px; background: var(--border); outline: none; margin: 1.5rem 0; }
+        input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 24px; height: 24px; background: #FFFFFF; border: 1px solid var(--charcoal); border-radius: 50%; cursor: pointer; }
+        .display-value { font-weight: 200; font-size: 3.5rem; line-height: 1; letter-spacing: -0.02em; }
+        .unit { font-size: 0.9rem; color: var(--soft-gray); margin-left: 0.5rem; font-weight: 300; }
+        .custom-checkbox { display: flex; align-items: center; cursor: pointer; padding: 0.75rem 0; }
         .custom-checkbox input { display: none; }
-
-        .checkmark {
-            width: 20px;
-            height: 20px;
-            border: 1px solid var(--charcoal);
-            margin-right: 1rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
+        .checkmark { width: 20px; height: 20px; border: 1px solid var(--charcoal); margin-right: 1rem; display: flex; align-items: center; justify-content: center; }
         .custom-checkbox input:checked + .checkmark { background: var(--charcoal); }
-        .custom-checkbox input:checked + .checkmark::after {
-            content: '';
-            width: 6px;
-            height: 6px;
-            background: white;
-        }
-
-        .sub-control {
-            max-height: 0;
-            overflow: hidden;
-            padding-left: 2rem;
-            border-left: 1px solid var(--border);
-            opacity: 0;
-            transition: all 0.4s ease;
-        }
-
-        .sub-control.active {
-            max-height: 500px;
-            opacity: 1;
-            margin-top: 1rem;
-            margin-bottom: 2rem;
-        }
-
-        .result-panel {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: #FFFFFF;
-            border-top: 1px solid var(--charcoal);
-            padding: 2rem 1.5rem calc(2rem + env(safe-area-inset-bottom));
-            max-width: 600px;
-            margin: 0 auto;
-            z-index: 40;
-        }
-
-        .price-display {
-            font-weight: 100;
-            font-size: 4rem;
-            letter-spacing: -0.05em;
-            line-height: 1;
-        }
-
-        #modalOverlay {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: white;
-            z-index: 100;
-            display: none;
-            overflow-y: auto;
-            padding: 2rem 1.5rem;
-        }
-
-        .settings-table {
-            width: 100%;
-            margin-bottom: 2rem;
-        }
-
-        .settings-table td {
-            padding: 0.8rem 0;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .settings-table input {
-            width: 80px;
-            border: 1px solid var(--border);
-            padding: 0.3rem;
-            text-align: right;
-            font-weight: 600;
-            outline: none;
-        }
-
-        .save-btn {
-            background: var(--charcoal);
-            color: white;
-            width: 100%;
-            padding: 1.2rem;
-            text-transform: uppercase;
-            letter-spacing: 0.2em;
-            font-size: 0.75rem;
-            font-weight: 700;
-            transition: opacity 0.2s;
-        }
-
+        .custom-checkbox input:checked + .checkmark::after { content: ''; width: 6px; height: 6px; background: white; }
+        .sub-control { max-height: 0; overflow: hidden; padding-left: 2rem; border-left: 1px solid var(--border); opacity: 0; transition: all 0.4s ease; }
+        .sub-control.active { max-height: 500px; opacity: 1; margin-top: 1rem; margin-bottom: 2rem; }
+        .result-panel { position: fixed; bottom: 0; left: 0; right: 0; background: #FFFFFF; border-top: 1px solid var(--charcoal); padding: 2rem 1.5rem calc(2rem + env(safe-area-inset-bottom)); max-width: 600px; margin: 0 auto; z-index: 40; }
+        .price-display { font-weight: 100; font-size: 4rem; letter-spacing: -0.05em; line-height: 1; }
+        #modalOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 100; display: none; overflow-y: auto; padding: 2rem 1.5rem; }
+        .settings-table { width: 100%; margin-bottom: 2rem; }
+        .settings-table td { padding: 0.8rem 0; border-bottom: 1px solid var(--border); }
+        .settings-table input { width: 80px; border: 1px solid var(--border); padding: 0.3rem; text-align: right; font-weight: 600; outline: none; }
+        .save-btn { background: var(--charcoal); color: white; width: 100%; padding: 1.2rem; text-transform: uppercase; letter-spacing: 0.2em; font-size: 0.75rem; font-weight: 700; transition: opacity 0.2s; }
         .save-btn:active { opacity: 0.7; }
-
+        .save-btn:disabled { opacity: 0.5; cursor: not-allowed; }
         .hidden-element { display: none !important; }
-
-        input::-webkit-outer-spin-button,
-        input::-webkit-inner-spin-button {
-            -webkit-appearance: none;
-            margin: 0;
-        }
     </style>
 </head>
 <body>
 
     <canvas id="splatterCanvas"></canvas>
 
-    <!-- Lock Screen -->
     <div id="lockOverlay">
         <div class="header-title mb-8">DreadMetric</div>
         <p class="text-xs uppercase tracking-widest text-gray-400 mb-2">Пробный период завершен</p>
-        <h2 class="text-xl font-light mb-6">Требуется активация</h2>
+        <h2 class="text-xl font-light mb-6">Активация устройства</h2>
         <input type="text" id="activationKey" class="key-input" placeholder="XXXX-XXXX-XXXX" autocomplete="off">
         <button id="activateBtn" onclick="checkKey()" class="save-btn max-w-[300px]">Активировать</button>
-        <p id="keyError" class="mt-4 text-[10px] text-red-500 uppercase tracking-widest hidden">Неверный ключ</p>
+        <p id="keyError" class="mt-4 text-[10px] text-red-500 uppercase tracking-widest hidden">Ошибка</p>
         <div class="mt-10 pt-10 border-t w-full max-w-[300px]">
             <p class="text-[9px] uppercase tracking-widest text-gray-400">ID устройства:</p>
             <p id="deviceIdLabel" class="text-[9px] font-mono mt-1 opacity-50">загрузка...</p>
@@ -368,7 +107,6 @@
                 <span class="section-label" style="margin-bottom:0">Конфигуратор прайса</span>
                 <button onclick="toggleModal(false)" class="text-3xl font-light p-2">&times;</button>
             </div>
-
             <div class="mb-10">
                 <h3 class="section-label">Плетение натуральных дред</h3>
                 <table class="settings-table">
@@ -376,7 +114,6 @@
                     <tr><td class="text-sm">Шаг за каждые 10 см</td><td><input type="number" id="price_step" value="200"> ₽</td></tr>
                 </table>
             </div>
-
             <div class="mb-10">
                 <h3 class="section-label">Коррекция и дополнения</h3>
                 <table class="settings-table">
@@ -387,13 +124,8 @@
                     <tr><td class="text-sm">Прикорневое (шт)</td><td><input type="number" id="price_root" value="30"> ₽</td></tr>
                 </table>
             </div>
-
             <button onclick="saveSettings()" class="save-btn mb-12">Применить настройки</button>
-
-            <div class="border-t border-gray-100 pt-8 text-center">
-                <div class="text-[0.7rem] font-bold uppercase tracking-[0.4em] text-gray-900 mb-1">DreadMetric</div>
-                <div class="text-[0.6rem] text-gray-400 uppercase tracking-widest">Version 3.1.0 Professional Edition</div>
-            </div>
+            <div class="text-center opacity-30 text-[10px] uppercase tracking-widest">v3.1.5 Pro Edition</div>
         </div>
     </div>
 
@@ -403,41 +135,28 @@
             <div id="typeCreation" class="service-option active" onclick="setService('creation', event)">Плетение</div>
             <div id="typeCorrection" class="service-option" onclick="setService('correction', event)">Коррекция</div>
         </div>
-
         <div class="input-group">
-            <span id="mainCountLabel" class="section-label">01. Количество дред</span>
-            <div class="flex items-baseline">
-                <span id="countVal" class="display-value">50</span>
-                <span class="unit">шт</span>
-            </div>
+            <span class="section-label">01. Количество дред</span>
+            <div class="flex items-baseline"><span id="countVal" class="display-value">50</span><span class="unit">шт</span></div>
             <input type="range" id="countRange" min="0" max="150" value="50">
         </div>
-
         <div id="groupLength" class="input-group">
             <span class="section-label">02. Общая длина</span>
-            <div class="flex items-baseline">
-                <span id="lengthVal" class="display-value">10</span>
-                <span class="unit">см</span>
-            </div>
+            <div class="flex items-baseline"><span id="lengthVal" class="display-value">10</span><span class="unit">см</span></div>
             <input type="range" id="lengthRange" min="5" max="100" value="10">
         </div>
-
         <div id="groupAddons" class="input-group" style="border-bottom:none">
-            <span class="section-label">03. Дополнительные опции</span>
-            
-            <label class="custom-checkbox" onclick="handleCheck(event, 'bluntEndToggle')">
-                <input type="checkbox" id="bluntEndToggle">
-                <span class="checkmark"></span>
+            <span class="section-label">03. Опции</span>
+            <label class="custom-checkbox" onclick="handleCheck(event)">
+                <input type="checkbox" id="bluntEndToggle"><span class="checkmark"></span>
                 <span id="label_blunt" class="text-[0.65rem] font-bold uppercase tracking-widest">Тупой кончик</span>
             </label>
             <div id="bluntEndControl" class="sub-control">
                 <div class="flex items-baseline"><span id="bluntCountVal" class="display-value text-2xl">50</span><span class="unit">шт</span></div>
                 <input type="range" id="bluntCountRange" min="0" max="150" value="50">
             </div>
-
-            <label class="custom-checkbox mt-2" onclick="handleCheck(event, 'fusionToggle')">
-                <input type="checkbox" id="fusionToggle">
-                <span class="checkmark"></span>
+            <label class="custom-checkbox mt-2" onclick="handleCheck(event)">
+                <input type="checkbox" id="fusionToggle"><span class="checkmark"></span>
                 <span id="label_fusion" class="text-[0.65rem] font-bold uppercase tracking-widest">Сращивание</span>
             </label>
             <div id="fusionControl" class="sub-control">
@@ -445,31 +164,27 @@
                 <input type="range" id="fusionCountRange" min="0" max="150" value="50">
             </div>
         </div>
-
         <div id="groupAddonsCorr" class="input-group hidden-element" style="border-bottom:none">
             <span class="section-label">03. Опции коррекции</span>
-            <label class="custom-checkbox" onclick="handleCheck(event, 'corrLengthToggle')">
-                <input type="checkbox" id="corrLengthToggle">
-                <span class="checkmark"></span>
+            <label class="custom-checkbox" onclick="handleCheck(event)">
+                <input type="checkbox" id="corrLengthToggle"><span class="checkmark"></span>
                 <span id="label_corr_len" class="text-[0.65rem] font-bold uppercase tracking-widest">Коррекция длины</span>
             </label>
             <div id="corrLengthControl" class="sub-control">
                 <div class="mb-4">
-                    <span class="section-label" style="font-size:0.5rem">Количество</span>
+                    <span class="section-label" style="font-size:0.5rem">Кол-во</span>
                     <div class="flex items-baseline"><span id="clcVal" class="display-value text-2xl">50</span><span class="unit">шт</span></div>
                     <input type="range" id="clcRange" min="0" max="150" value="50">
                 </div>
                 <div>
-                    <span class="section-label" style="font-size:0.5rem">Длина коррекции</span>
+                    <span class="section-label" style="font-size:0.5rem">Длина</span>
                     <div class="flex items-baseline"><span id="clcmVal" class="display-value text-2xl">10</span><span class="unit">см</span></div>
                     <input type="range" id="clcmRange" min="10" max="100" step="10" value="10">
                 </div>
             </div>
-
-            <label class="custom-checkbox mt-2" onclick="handleCheck(event, 'rootToggle')">
-                <input type="checkbox" id="rootToggle">
-                <span class="checkmark"></span>
-                <span id="label_root" class="text-[0.65rem] font-bold uppercase tracking-widest">Прикорневое валяние</span>
+            <label class="custom-checkbox mt-2" onclick="handleCheck(event)">
+                <input type="checkbox" id="rootToggle"><span class="checkmark"></span>
+                <span id="label_root" class="text-[0.65rem] font-bold uppercase tracking-widest">Прикорневое</span>
             </label>
             <div id="rootControl" class="sub-control">
                 <div class="flex items-baseline"><span id="rootCountVal" class="display-value text-2xl">50</span><span class="unit">шт</span></div>
@@ -487,293 +202,221 @@
     </div>
 
     <script>
-        // --- Security & Licensing Logic ---
-        let deviceId = localStorage.getItem('dm_device_id') || crypto.randomUUID();
-        localStorage.setItem('dm_device_id', deviceId);
-        document.getElementById('deviceIdLabel').innerText = deviceId;
+        (function() {
+            // --- Постоянный ID устройства ---
+            let deviceId = localStorage.getItem('dm_device_id') || crypto.randomUUID();
+            localStorage.setItem('dm_device_id', deviceId);
+            document.getElementById('deviceIdLabel').innerText = deviceId;
 
-        let demoTimeLeft = 60;
-        let isActivated = localStorage.getItem('dm_active') === 'true';
+            // --- Состояние активации и ТАЙМЕР ---
+            let isActivated = localStorage.getItem('dm_active') === 'true';
+            const TOTAL_DEMO_TIME = 60; 
+            
+            let timeLeft = parseInt(localStorage.getItem('dm_time_left'));
+            if (isNaN(timeLeft)) timeLeft = TOTAL_DEMO_TIME;
 
-        async function initSecurity() {
-            if (isActivated) {
-                document.getElementById('demoTimer').style.display = 'none';
-                return;
-            }
-            startDemoTimer();
-        }
-
-        function startDemoTimer() {
-            const timerEl = document.getElementById('demoTimer');
-            const interval = setInterval(() => {
-                demoTimeLeft--;
-                if (demoTimeLeft <= 0) {
-                    clearInterval(interval);
-                    timerEl.innerText = "DEMO 00:00";
-                    showLock();
-                } else {
-                    const mins = Math.floor(demoTimeLeft / 60);
-                    const secs = demoTimeLeft % 60;
-                    timerEl.innerText = `DEMO ${mins}:${secs < 10 ? '0' : ''}${secs}`;
+            window.initSecurity = function() {
+                if (isActivated) {
+                    document.getElementById('demoTimer').style.display = 'none';
+                    return;
                 }
-            }, 1000);
-        }
-
-        function showLock() {
-            document.getElementById('lockOverlay').style.display = 'flex';
-        }
-
-        async function checkKey() {
-            const keyInput = document.getElementById('activationKey');
-            const btn = document.getElementById('activateBtn');
-            const key = keyInput.value.trim().toUpperCase();
-            const errEl = document.getElementById('keyError');
-            
-            if (!key) return;
-            
-            btn.disabled = true;
-            btn.innerText = "Проверка...";
-            errEl.classList.add('hidden');
-
-            try {
-                const { db, appId, doc, getDoc, updateDoc, auth, signInAnonymously } = window.firebaseTools;
                 
-                // Ждем авторизацию если ее нет
-                if (!auth.currentUser) {
-                    await signInAnonymously(auth);
+                const timerEl = document.getElementById('demoTimer');
+                
+                if (timeLeft <= 0) {
+                    timerEl.innerText = "DEMO 00:00";
+                    document.getElementById('lockOverlay').style.display = 'flex';
+                    return;
                 }
 
-                // Ссылка на ключ в правильной коллекции по твоим правилам
-                const keyRef = doc(db, 'artifacts', appId, 'public', 'data', 'keys', key);
-                const snap = await getDoc(keyRef);
-
-                if (snap.exists()) {
-                    const data = snap.data();
+                const interval = setInterval(() => {
+                    timeLeft--;
+                    localStorage.setItem('dm_time_left', timeLeft); 
                     
-                    // Если ключ свободен или уже привязан к этому ID
-                    if (!data.usedBy || data.usedBy === deviceId) {
-                        await updateDoc(keyRef, {
-                            usedBy: deviceId,
-                            activatedAt: new Date().toISOString()
-                        });
-                        
-                        localStorage.setItem('dm_active', 'true');
-                        document.getElementById('lockOverlay').style.display = 'none';
-                        document.getElementById('demoTimer').style.display = 'none';
-                        playBubbleSound();
+                    if (timeLeft <= 0) {
+                        clearInterval(interval);
+                        timerEl.innerText = "DEMO 00:00";
+                        document.getElementById('lockOverlay').style.display = 'flex';
                     } else {
-                        throw new Error("Ключ занят другим устройством");
+                        const m = Math.floor(timeLeft / 60), s = timeLeft % 60;
+                        timerEl.innerText = `DEMO ${m}:${s < 10 ? '0' : ''}${s}`;
                     }
-                } else {
-                    throw new Error("Ключ не найден");
+                }, 1000);
+            };
+
+            window.checkKey = async function() {
+                const btn = document.getElementById('activateBtn');
+                const errEl = document.getElementById('keyError');
+                const key = document.getElementById('activationKey').value.trim().toUpperCase();
+                
+                if (!key) return;
+                btn.disabled = true;
+                btn.innerText = "Проверка...";
+                errEl.classList.add('hidden');
+
+                try {
+                    const { db, appId, doc, getDoc, updateDoc, auth, signInAnonymously } = window.firebaseTools;
+                    if (!auth.currentUser) await signInAnonymously(auth);
+
+                    const keyRef = doc(db, 'artifacts', appId, 'public', 'data', 'keys', key);
+                    const snap = await getDoc(keyRef);
+
+                    if (snap.exists()) {
+                        const data = snap.data();
+                        if (!data.usedBy || data.usedBy === deviceId) {
+                            await updateDoc(keyRef, { usedBy: deviceId, activatedAt: new Date().toISOString() });
+                            localStorage.setItem('dm_active', 'true');
+                            location.reload();
+                        } else {
+                            throw new Error("Ключ уже активирован");
+                        }
+                    } else {
+                        throw new Error("Неверный ключ");
+                    }
+                } catch (e) {
+                    errEl.innerText = e.message;
+                    errEl.classList.remove('hidden');
+                } finally {
+                    btn.disabled = false;
+                    btn.innerText = "Активировать";
                 }
-            } catch (e) {
-                console.error(e);
-                errEl.innerText = e.message || "Ошибка активации";
-                errEl.classList.remove('hidden');
-            } finally {
-                btn.disabled = false;
-                btn.innerText = "Активировать";
-            }
-        }
+            };
 
-        // --- Audio Engine ---
-        const AudioContext = window.AudioContext || window.webkitAudioContext;
-        let audioCtx;
+            // --- Аудио-эффекты ---
+            let audioCtx;
+            window.playBubbleSound = function() {
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(400 + Math.random()*400, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(1200, audioCtx.currentTime + 0.05);
+                gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
+                osc.connect(gain); gain.connect(audioCtx.destination);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.1);
+            };
 
-        function playBubbleSound() {
-            if (!audioCtx) audioCtx = new AudioContext();
-            if (audioCtx.state === 'suspended') audioCtx.resume();
-            const startTime = audioCtx.currentTime;
+            // --- Логика Калькулятора ---
+            let config = { price_base:300, price_step:200, price_corr_base:150, price_blunt:50, price_fusion:50, price_corr_len:50, price_root:30 };
             
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(450 + Math.random() * 300, startTime);
-            osc.frequency.exponentialRampToValueAtTime(1000, startTime + 0.05);
-            gain.gain.setValueAtTime(0.1, startTime);
-            gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.08);
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
-            osc.start(startTime);
-            osc.stop(startTime + 0.08);
-        }
+            window.loadSettings = function() {
+                const saved = localStorage.getItem('dm_cfg');
+                if(saved) config = JSON.parse(saved);
+                Object.keys(config).forEach(k => { if(document.getElementById(k)) document.getElementById(k).value = config[k]; });
+                updateLabels();
+            };
 
-        // --- Core Logic ---
-        let config = {
-            price_base: 300, price_step: 200, price_corr_base: 150,
-            price_blunt: 50, price_fusion: 50, price_corr_len: 50, price_root: 30
-        };
+            window.saveSettings = function() {
+                Object.keys(config).forEach(k => { config[k] = parseInt(document.getElementById(k).value) || 0; });
+                localStorage.setItem('dm_cfg', JSON.stringify(config));
+                updateLabels(); calculateTotal(); toggleModal(false); playBubbleSound();
+            };
 
-        function saveSettings() {
-            Object.keys(config).forEach(key => {
-                const el = document.getElementById(key);
-                if(el) config[key] = parseInt(el.value) || 0;
+            function updateLabels() {
+                document.getElementById('label_blunt').innerText = `Тупой кончик (+${config.price_blunt}₽)`;
+                document.getElementById('label_fusion').innerText = `Сращивание (+${config.price_fusion}₽)`;
+                document.getElementById('label_corr_len').innerText = `Длина (+${config.price_corr_len}₽)`;
+                document.getElementById('label_root').innerText = `Прикорневое (+${config.price_root}₽)`;
+            }
+
+            // --- Анимация Частиц (ФИКС ОШИБКИ Identifier 'P') ---
+            const canvas = document.getElementById('splatterCanvas');
+            const ctx = canvas.getContext('2d');
+            let particles = [];
+            function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+            window.onresize = resize; resize();
+            
+            class Particle {
+                constructor(x,y) { this.x=x; this.y=y; this.s=Math.random()*2; this.vx=Math.random()*4-2; this.vy=Math.random()*4-2; this.o=1; }
+                u() { this.x+=this.vx; this.y+=this.vy; this.o-=0.05; }
+                d() { ctx.fillStyle='#111827'; ctx.globalAlpha=this.o; ctx.beginPath(); ctx.arc(this.x,this.y,this.s,0,Math.PI*2); ctx.fill(); }
+            }
+
+            window.triggerSplatter = function(e) {
+                const r = e.target.getBoundingClientRect();
+                for(let i=0; i<8; i++) particles.push(new Particle(r.left+r.width/2, r.top+r.height/2));
+                playBubbleSound();
+            };
+
+            function animate() {
+                ctx.clearRect(0,0,canvas.width,canvas.height);
+                particles = particles.filter(p => p.o > 0);
+                particles.forEach(p => { p.u(); p.d(); });
+                requestAnimationFrame(animate);
+            }
+            animate();
+
+            // --- UI и Взаимодействие ---
+            let currentService = 'creation';
+            window.toggleModal = function(s) { document.getElementById('modalOverlay').style.display = s?'block':'none'; if(s) playBubbleSound(); };
+            
+            window.setService = function(t, e) {
+                currentService = t;
+                document.getElementById('typeCreation').classList.toggle('active', t==='creation');
+                document.getElementById('typeCorrection').classList.toggle('active', t==='correction');
+                document.getElementById('groupLength').classList.toggle('hidden-element', t==='correction');
+                document.getElementById('groupAddons').classList.toggle('hidden-element', t==='correction');
+                document.getElementById('groupAddonsCorr').classList.toggle('hidden-element', t==='creation');
+                triggerSplatter(e); calculateTotal();
+            };
+
+            window.handleCheck = function(e) { triggerSplatter(e); setTimeout(calculateTotal, 50); };
+            
+            const uiIds = ['countRange','lengthRange','bluntCountRange','fusionCountRange','clcRange','clcmRange','rootCountRange','bluntEndToggle','fusionToggle','corrLengthToggle','rootToggle'];
+            uiIds.forEach(id => {
+                const el = document.getElementById(id);
+                if(el) el.oninput = (e) => { if(e.target.type==='range') playBubbleSound(); updateUI(); calculateTotal(); };
             });
-            localStorage.setItem('dm_cfg', JSON.stringify(config));
-            updateLabels();
-            calculateTotal();
-            toggleModal(false);
-            playBubbleSound();
-        }
 
-        function loadSettings() {
-            const saved = localStorage.getItem('dm_cfg');
-            if(saved) {
-                config = JSON.parse(saved);
-                Object.keys(config).forEach(key => {
-                    const el = document.getElementById(key);
-                    if(el) el.value = config[key];
-                });
-            }
-            updateLabels();
-        }
+            window.updateUI = function() {
+                document.getElementById('countVal').innerText = document.getElementById('countRange').value;
+                document.getElementById('lengthVal').innerText = document.getElementById('lengthRange').value;
+                document.getElementById('bluntCountVal').innerText = document.getElementById('bluntCountRange').value;
+                document.getElementById('fusionCountVal').innerText = document.getElementById('fusionCountRange').value;
+                document.getElementById('clcVal').innerText = document.getElementById('clcRange').value;
+                document.getElementById('clcmVal').innerText = document.getElementById('clcmRange').value;
+                document.getElementById('rootCountVal').innerText = document.getElementById('rootCountRange').value;
+                document.getElementById('bluntEndControl').classList.toggle('active', document.getElementById('bluntEndToggle').checked);
+                document.getElementById('fusionControl').classList.toggle('active', document.getElementById('fusionToggle').checked);
+                document.getElementById('corrLengthControl').classList.toggle('active', document.getElementById('corrLengthToggle').checked);
+                document.getElementById('rootControl').classList.toggle('active', document.getElementById('rootToggle').checked);
+            };
 
-        function updateLabels() {
-            document.getElementById('label_blunt').innerText = `Тупой кончик (+${config.price_blunt}₽)`;
-            document.getElementById('label_fusion').innerText = `Сращивание (+${config.price_fusion}₽)`;
-            document.getElementById('label_corr_len').innerText = `Удлинение/Длина (+${config.price_corr_len}₽)`;
-            document.getElementById('label_root').innerText = `Прикорневое (+${config.price_root}₽)`;
-        }
-
-        // --- Particle Canvas ---
-        const canvas = document.getElementById('splatterCanvas');
-        const ctx = canvas.getContext('2d');
-        let particles = [];
-        function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
-        window.addEventListener('resize', resize);
-        resize();
-
-        class Particle {
-            constructor(x, y) {
-                this.x = x; this.y = y;
-                this.size = Math.random() * 2 + 0.5;
-                this.speedX = Math.random() * 4 - 2;
-                this.speedY = Math.random() * 4 - 2;
-                this.opacity = 1;
-            }
-            update() { this.x += this.speedX; this.y += this.speedY; this.opacity -= 0.05; }
-            draw() { 
-                ctx.fillStyle = '#111827'; 
-                ctx.globalAlpha = this.opacity; 
-                ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI*2); ctx.fill(); 
-            }
-        }
-
-        function triggerSplatter(e) {
-            const rect = e.target.getBoundingClientRect();
-            const x = rect.left + rect.width/2;
-            const y = rect.top + rect.height/2;
-            for(let i=0; i<8; i++) particles.push(new Particle(x, y));
-            playBubbleSound();
-        }
-
-        function animate() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            particles = particles.filter(p => p.opacity > 0);
-            particles.forEach(p => { p.update(); p.draw(); });
-            requestAnimationFrame(animate);
-        }
-        animate();
-
-        // --- App Interaction ---
-        let currentService = 'creation';
-        function toggleModal(s) { 
-            document.getElementById('modalOverlay').style.display = s ? 'block' : 'none'; 
-            if(s) playBubbleSound(); 
-        }
-
-        function setService(t, e) {
-            currentService = t;
-            document.getElementById('typeCreation').classList.toggle('active', t === 'creation');
-            document.getElementById('typeCorrection').classList.toggle('active', t === 'correction');
-            document.getElementById('groupLength').classList.toggle('hidden-element', t === 'correction');
-            document.getElementById('groupAddons').classList.toggle('hidden-element', t === 'correction');
-            document.getElementById('groupAddonsCorr').classList.toggle('hidden-element', t === 'creation');
-            triggerSplatter(e);
-            calculateTotal();
-        }
-
-        function handleCheck(e, id) {
-            triggerSplatter(e);
-            setTimeout(calculateTotal, 30);
-        }
-
-        const uiElements = [
-            'countRange', 'lengthRange', 'bluntCountRange', 'fusionCountRange',
-            'clcRange', 'clcmRange', 'rootCountRange',
-            'bluntEndToggle', 'fusionToggle', 'corrLengthToggle', 'rootToggle'
-        ];
-
-        uiElements.forEach(id => {
-            const el = document.getElementById(id);
-            if(el) {
-                el.addEventListener('input', (e) => {
-                    if(e.target.type === 'range') playBubbleSound();
-                    updateUI();
-                    calculateTotal();
-                });
-            }
-        });
-
-        function updateUI() {
-            document.getElementById('countVal').innerText = document.getElementById('countRange').value;
-            document.getElementById('lengthVal').innerText = document.getElementById('lengthRange').value;
-            document.getElementById('bluntCountVal').innerText = document.getElementById('bluntCountRange').value;
-            document.getElementById('fusionCountVal').innerText = document.getElementById('fusionCountRange').value;
-            document.getElementById('clcVal').innerText = document.getElementById('clcRange').value;
-            document.getElementById('clcmVal').innerText = document.getElementById('clcmRange').value;
-            document.getElementById('rootCountVal').innerText = document.getElementById('rootCountRange').value;
-
-            document.getElementById('bluntEndControl').classList.toggle('active', document.getElementById('bluntEndToggle').checked);
-            document.getElementById('fusionControl').classList.toggle('active', document.getElementById('fusionToggle').checked);
-            document.getElementById('corrLengthControl').classList.toggle('active', document.getElementById('corrLengthToggle').checked);
-            document.getElementById('rootControl').classList.toggle('active', document.getElementById('rootToggle').checked);
-        }
-
-        function calculateTotal() {
-            let total = 0;
-            const count = parseInt(document.getElementById('countRange').value);
-
-            if(currentService === 'creation') {
-                const len = parseInt(document.getElementById('lengthRange').value);
-                let perUnit = config.price_base;
-                if(len > 10) perUnit += Math.ceil((len - 10) / 10) * config.price_step;
-                total = count * perUnit;
-                if(document.getElementById('bluntEndToggle').checked) 
-                    total += parseInt(document.getElementById('bluntCountRange').value) * config.price_blunt;
-                if(document.getElementById('fusionToggle').checked) 
-                    total += parseInt(document.getElementById('fusionCountRange').value) * config.price_fusion;
-            } else {
-                total = count * config.price_corr_base;
-                if(document.getElementById('corrLengthToggle').checked) {
-                    total += parseInt(document.getElementById('clcRange').value) * (parseInt(document.getElementById('clcmRange').value) / 10 * config.price_corr_len);
+            window.calculateTotal = function() {
+                let total = 0;
+                const count = parseInt(document.getElementById('countRange').value);
+                if(currentService === 'creation') {
+                    const len = parseInt(document.getElementById('lengthRange').value);
+                    let perUnit = config.price_base;
+                    if(len > 10) perUnit += Math.ceil((len - 10) / 10) * config.price_step;
+                    total = count * perUnit;
+                    if(document.getElementById('bluntEndToggle').checked) total += parseInt(document.getElementById('bluntCountRange').value) * config.price_blunt;
+                    if(document.getElementById('fusionToggle').checked) total += parseInt(document.getElementById('fusionCountRange').value) * config.price_fusion;
+                } else {
+                    total = count * config.price_corr_base;
+                    if(document.getElementById('corrLengthToggle').checked) total += parseInt(document.getElementById('clcRange').value) * (parseInt(document.getElementById('clcmRange').value) / 10 * config.price_corr_len);
+                    if(document.getElementById('rootToggle').checked) total += parseInt(document.getElementById('rootCountRange').value) * config.price_root;
                 }
-                if(document.getElementById('rootToggle').checked) 
-                    total += parseInt(document.getElementById('rootCountRange').value) * config.price_root;
-            }
+                const display = document.getElementById('totalPrice');
+                const startVal = parseInt(display.innerText.replace(/\s/g, '')) || 0;
+                const duration = 200, startTs = performance.now();
+                function step(ts) {
+                    const p = Math.min((ts - startTs) / duration, 1);
+                    display.innerText = Math.floor(startVal + (total - startVal) * p).toLocaleString();
+                    if(p < 1) requestAnimationFrame(step);
+                }
+                requestAnimationFrame(step);
+            };
 
-            const display = document.getElementById('totalPrice');
-            const startVal = parseInt(display.innerText.replace(/\s/g, '')) || 0;
-            const duration = 250;
-            const startTimestamp = performance.now();
-
-            function step(ts) {
-                const progress = Math.min((ts - startTimestamp) / duration, 1);
-                const current = Math.floor(startVal + (total - startVal) * progress);
-                display.innerText = current.toLocaleString();
-                if(progress < 1) requestAnimationFrame(step);
-            }
-            requestAnimationFrame(step);
-        }
-
-        window.onload = () => {
-            loadSettings();
-            updateUI();
-            calculateTotal();
-            initSecurity();
-            if (typeof vkBridge !== 'undefined') vkBridge.send('VKWebAppInit').catch(() => {});
-        };
+            window.onload = () => { 
+                loadSettings(); 
+                updateUI(); 
+                calculateTotal(); 
+                initSecurity(); 
+                if (typeof vkBridge !== 'undefined') vkBridge.send('VKWebAppInit').catch(() => {});
+            };
+        })();
     </script>
 </body>
 </html>
