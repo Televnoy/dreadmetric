@@ -8,9 +8,10 @@
     <meta name="theme-color" content="#111827">
     <title>DreadMetric | Professional Tool</title>
     
-    <!-- PWA Manifest -->
-    <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIkRyZWFkTWV0cmljIiwKICAic2hvcnRfbmFtZSI6ICJEcmVhZCIsCiAgInN0YXJ0X3VybCI6ICIuIiwKICAiZGlzcGxheSI6ICJzdGFuZGFsb25lIiwKICAiYmFja2dyb3VuZF9jb2xvciI6ICIjRkZGRkZGIiwKICAidGhlbWVfY29sb3IiOiAiIzExMTgyNyIsCiAgImljb25zIjogWwogICAgewogICAgICAic3JjIjogImZhdmljb24uc3ZnIiwKICAgICAgInNpemVzIjogImFueSIsCiAgICAgICJ0eXBlIjogImltYWdlL3N2Zyt4bWwiCiAgICB9CiAgXQp9">
+    <!-- PWA Assets -->
+    <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIkRyZWFkTWV0cmljIiwKICAic2hvcnRfbmFtZSI6ICJEcmVhZCIsCiAgInN0YXJ0X3VybCI6ICIuIiwKICAiZGlzcGxheSI6ICJzdGFuZGFsb25lIiwKICAiYmFja2dyb3VuZF9jb2xvciI6ICIjRkZGRkZGIiwKICAidGhlbWVfY29sb3IiOiAiIzExMTgyNyIsCiAgImljb25zIjogWwogICAgewogICAgICAic3JjIjogImZhdmljb24uc3ZnIiwKICAgICAgInNpemVzIjogImFueSIsCiAgICAgICJ0eXBlIjogImltYWdlL3N2Zyt4bWwiCiAgICB9LAogICAgewogICAgICAic3JjIjogImljb24tMTkyLnBuZyIsCiAgICAgICJzaXplcyI6ICIxOTJ4MTkyIiwKICAgICAgInR5cGUiOiAiaW1hZ2UvcG5nIgogICAgfSwKICAgIHsKICAgICAgInNyYyI6ICJpY29uLTUxMi5wbmciLAogICAgICAic2l6ZXMiOiAiNTEyeDUxMiIsCiAgICAgICJ0eXBlIjogImltYWdlL3BuZyIKICAgIH0KICBdCn0=">
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <link rel="apple-touch-icon" href="icon-192.png">
 
     <script src="https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/tailwindcss-cdn@3.4.1/tailwindcss.js"></script>
@@ -19,8 +20,9 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, updateDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+        // Твои проверенные данные Firebase
         const firebaseConfig = {
             apiKey: "AIzaSyBk99RmIn2McXhLlMV4huc2iTUGONc7Zig",
             authDomain: "rootscalc-1c302.firebaseapp.com",
@@ -35,10 +37,14 @@
         const db = getFirestore(app);
         const appId = 'rootscalc-pro';
 
-        window.db = db;
-        window.auth = auth;
-        window.appId = appId;
-        window.firestoreUtils = { doc, getDoc, updateDoc, setDoc };
+        // Экспорт в глобальную область для использования в обычных скриптах
+        window.firebaseTools = {
+            db, auth, appId,
+            doc, getDoc, updateDoc, signInAnonymously
+        };
+
+        // Сразу инициируем анонимный вход (Правило 3)
+        signInAnonymously(auth).catch(err => console.error("Firebase Auth Error:", err));
     </script>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -116,7 +122,6 @@
             padding: 2rem 1.5rem 14rem;
         }
 
-        /* Lock Overlay Style */
         #lockOverlay {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -140,9 +145,9 @@
             font-family: monospace;
             letter-spacing: 2px;
             text-transform: uppercase;
+            outline: none;
         }
 
-        /* --- Original Styles Below --- */
         .section-label {
             letter-spacing: 0.25em;
             text-transform: uppercase;
@@ -342,9 +347,9 @@
         <div class="header-title mb-8">DreadMetric</div>
         <p class="text-xs uppercase tracking-widest text-gray-400 mb-2">Пробный период завершен</p>
         <h2 class="text-xl font-light mb-6">Требуется активация</h2>
-        <input type="text" id="activationKey" class="key-input" placeholder="XXXX-XXXX-XXXX">
-        <button onclick="checkKey()" class="save-btn max-w-[300px]">Активировать</button>
-        <p id="keyError" class="mt-4 text-[10px] text-red-500 uppercase tracking-widest hidden">Неверный ключ или ключ уже занят</p>
+        <input type="text" id="activationKey" class="key-input" placeholder="XXXX-XXXX-XXXX" autocomplete="off">
+        <button id="activateBtn" onclick="checkKey()" class="save-btn max-w-[300px]">Активировать</button>
+        <p id="keyError" class="mt-4 text-[10px] text-red-500 uppercase tracking-widest hidden">Неверный ключ</p>
         <div class="mt-10 pt-10 border-t w-full max-w-[300px]">
             <p class="text-[9px] uppercase tracking-widest text-gray-400">ID устройства:</p>
             <p id="deviceIdLabel" class="text-[9px] font-mono mt-1 opacity-50">загрузка...</p>
@@ -357,7 +362,6 @@
         <div class="info-btn" onclick="toggleModal(true)">Настройки</div>
     </header>
 
-    <!-- Rest of the app (same as original) -->
     <div id="modalOverlay">
         <div class="max-w-xl mx-auto pb-20">
             <div class="flex justify-between items-center mb-10">
@@ -388,7 +392,7 @@
 
             <div class="border-t border-gray-100 pt-8 text-center">
                 <div class="text-[0.7rem] font-bold uppercase tracking-[0.4em] text-gray-900 mb-1">DreadMetric</div>
-                <div class="text-[0.6rem] text-gray-400 uppercase tracking-widest">Version 3.0.0 Professional Edition</div>
+                <div class="text-[0.6rem] text-gray-400 uppercase tracking-widest">Version 3.1.0 Professional Edition</div>
             </div>
         </div>
     </div>
@@ -503,13 +507,14 @@
             const timerEl = document.getElementById('demoTimer');
             const interval = setInterval(() => {
                 demoTimeLeft--;
-                const mins = Math.floor(demoTimeLeft / 60);
-                const secs = demoTimeLeft % 60;
-                timerEl.innerText = `DEMO ${mins}:${secs < 10 ? '0' : ''}${secs}`;
-
                 if (demoTimeLeft <= 0) {
                     clearInterval(interval);
+                    timerEl.innerText = "DEMO 00:00";
                     showLock();
+                } else {
+                    const mins = Math.floor(demoTimeLeft / 60);
+                    const secs = demoTimeLeft % 60;
+                    timerEl.innerText = `DEMO ${mins}:${secs < 10 ? '0' : ''}${secs}`;
                 }
             }, 1000);
         }
@@ -519,49 +524,60 @@
         }
 
         async function checkKey() {
-            const key = document.getElementById('activationKey').value.trim().toUpperCase();
+            const keyInput = document.getElementById('activationKey');
+            const btn = document.getElementById('activateBtn');
+            const key = keyInput.value.trim().toUpperCase();
             const errEl = document.getElementById('keyError');
+            
+            if (!key) return;
+            
+            btn.disabled = true;
+            btn.innerText = "Проверка...";
             errEl.classList.add('hidden');
 
-            if (!key) return;
-
             try {
-                const { doc, getDoc, updateDoc, setDoc } = window.firestoreUtils;
-                const keyRef = doc(window.db, 'artifacts', window.appId, 'public', 'data', 'keys', key);
+                const { db, appId, doc, getDoc, updateDoc, auth, signInAnonymously } = window.firebaseTools;
                 
-                // Auth check first
-                if (!window.auth.currentUser) await signInAnonymously(window.auth);
+                // Ждем авторизацию если ее нет
+                if (!auth.currentUser) {
+                    await signInAnonymously(auth);
+                }
 
+                // Ссылка на ключ в правильной коллекции по твоим правилам
+                const keyRef = doc(db, 'artifacts', appId, 'public', 'data', 'keys', key);
                 const snap = await getDoc(keyRef);
-                
+
                 if (snap.exists()) {
                     const data = snap.data();
+                    
+                    // Если ключ свободен или уже привязан к этому ID
                     if (!data.usedBy || data.usedBy === deviceId) {
-                        // Activate
                         await updateDoc(keyRef, {
                             usedBy: deviceId,
                             activatedAt: new Date().toISOString()
                         });
+                        
                         localStorage.setItem('dm_active', 'true');
                         document.getElementById('lockOverlay').style.display = 'none';
                         document.getElementById('demoTimer').style.display = 'none';
                         playBubbleSound();
                     } else {
-                        errEl.innerText = "Этот ключ уже используется на другом устройстве";
-                        errEl.classList.remove('hidden');
+                        throw new Error("Ключ занят другим устройством");
                     }
                 } else {
-                    errEl.innerText = "Неверный лицензионный ключ";
-                    errEl.classList.remove('hidden');
+                    throw new Error("Ключ не найден");
                 }
             } catch (e) {
                 console.error(e);
-                errEl.innerText = "Ошибка проверки. Проверьте интернет";
+                errEl.innerText = e.message || "Ошибка активации";
                 errEl.classList.remove('hidden');
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "Активировать";
             }
         }
 
-        // --- Audio Engine: Original Bubbles ---
+        // --- Audio Engine ---
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         let audioCtx;
 
@@ -570,34 +586,20 @@
             if (audioCtx.state === 'suspended') audioCtx.resume();
             const startTime = audioCtx.currentTime;
             
-            const osc1 = audioCtx.createOscillator();
-            const gain1 = audioCtx.createGain();
-            osc1.type = 'sine';
-            osc1.frequency.setValueAtTime(450 + Math.random() * 150, startTime);
-            osc1.frequency.exponentialRampToValueAtTime(900 + Math.random() * 100, startTime + 0.04);
-            gain1.gain.setValueAtTime(0, startTime);
-            gain1.gain.linearRampToValueAtTime(0.12, startTime + 0.01);
-            gain1.gain.exponentialRampToValueAtTime(0.001, startTime + 0.07);
-            osc1.connect(gain1);
-            gain1.connect(audioCtx.destination);
-            osc1.start(startTime);
-            osc1.stop(startTime + 0.07);
-
-            const osc2 = audioCtx.createOscillator();
-            const gain2 = audioCtx.createGain();
-            osc2.type = 'sine';
-            osc2.frequency.setValueAtTime(700 + Math.random() * 100, startTime + 0.02);
-            osc2.frequency.exponentialRampToValueAtTime(1300 + Math.random() * 150, startTime + 0.06);
-            gain2.gain.setValueAtTime(0, startTime + 0.02);
-            gain2.gain.linearRampToValueAtTime(0.06, startTime + 0.03);
-            gain2.gain.exponentialRampToValueAtTime(0.001, startTime + 0.09);
-            osc2.connect(gain2);
-            gain2.connect(audioCtx.destination);
-            osc2.start(startTime + 0.02);
-            osc2.stop(startTime + 0.09);
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(450 + Math.random() * 300, startTime);
+            osc.frequency.exponentialRampToValueAtTime(1000, startTime + 0.05);
+            gain.gain.setValueAtTime(0.1, startTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.08);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start(startTime);
+            osc.stop(startTime + 0.08);
         }
 
-        // --- Original App Logic ---
+        // --- Core Logic ---
         let config = {
             price_base: 300, price_step: 200, price_corr_base: 150,
             price_blunt: 50, price_fusion: 50, price_corr_len: 50, price_root: 30
@@ -634,7 +636,7 @@
             document.getElementById('label_root').innerText = `Прикорневое (+${config.price_root}₽)`;
         }
 
-        // --- Canvas Particles ---
+        // --- Particle Canvas ---
         const canvas = document.getElementById('splatterCanvas');
         const ctx = canvas.getContext('2d');
         let particles = [];
@@ -650,32 +652,31 @@
                 this.speedY = Math.random() * 4 - 2;
                 this.opacity = 1;
             }
-            update() { this.x += this.speedX; this.y += this.speedY; this.opacity -= 0.04; }
+            update() { this.x += this.speedX; this.y += this.speedY; this.opacity -= 0.05; }
             draw() { 
                 ctx.fillStyle = '#111827'; 
                 ctx.globalAlpha = this.opacity; 
-                ctx.beginPath(); 
-                ctx.arc(this.x, this.y, this.size, 0, Math.PI*2); 
-                ctx.fill(); 
+                ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI*2); ctx.fill(); 
             }
         }
 
         function triggerSplatter(e) {
             const rect = e.target.getBoundingClientRect();
-            const x = rect.left + rect.width / 2;
-            const y = rect.top + rect.height / 2;
-            for(let i=0; i<6; i++) particles.push(new Particle(x, y));
+            const x = rect.left + rect.width/2;
+            const y = rect.top + rect.height/2;
+            for(let i=0; i<8; i++) particles.push(new Particle(x, y));
             playBubbleSound();
         }
 
         function animate() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            particles.forEach((p, i) => { p.update(); p.draw(); if(p.opacity <= 0) particles.splice(i, 1); });
+            particles = particles.filter(p => p.opacity > 0);
+            particles.forEach(p => { p.update(); p.draw(); });
             requestAnimationFrame(animate);
         }
         animate();
 
-        // --- Interface ---
+        // --- App Interaction ---
         let currentService = 'creation';
         function toggleModal(s) { 
             document.getElementById('modalOverlay').style.display = s ? 'block' : 'none'; 
@@ -695,16 +696,16 @@
 
         function handleCheck(e, id) {
             triggerSplatter(e);
-            setTimeout(calculateTotal, 20);
+            setTimeout(calculateTotal, 30);
         }
 
-        const controls = [
+        const uiElements = [
             'countRange', 'lengthRange', 'bluntCountRange', 'fusionCountRange',
             'clcRange', 'clcmRange', 'rootCountRange',
             'bluntEndToggle', 'fusionToggle', 'corrLengthToggle', 'rootToggle'
         ];
 
-        controls.forEach(id => {
+        uiElements.forEach(id => {
             const el = document.getElementById(id);
             if(el) {
                 el.addEventListener('input', (e) => {
@@ -753,18 +754,17 @@
             }
 
             const display = document.getElementById('totalPrice');
-            const startValue = parseInt(display.innerText.replace(/\s/g, '')) || 0;
-            const duration = 300;
-            const startTime = performance.now();
+            const startVal = parseInt(display.innerText.replace(/\s/g, '')) || 0;
+            const duration = 250;
+            const startTimestamp = performance.now();
 
-            function updatePrice(t) {
-                const elapsed = t - startTime;
-                const progress = Math.min(elapsed / duration, 1);
-                const cur = Math.floor(startValue + (total - startValue) * progress);
-                display.innerText = cur.toLocaleString();
-                if(progress < 1) requestAnimationFrame(updatePrice);
+            function step(ts) {
+                const progress = Math.min((ts - startTimestamp) / duration, 1);
+                const current = Math.floor(startVal + (total - startVal) * progress);
+                display.innerText = current.toLocaleString();
+                if(progress < 1) requestAnimationFrame(step);
             }
-            requestAnimationFrame(updatePrice);
+            requestAnimationFrame(step);
         }
 
         window.onload = () => {
